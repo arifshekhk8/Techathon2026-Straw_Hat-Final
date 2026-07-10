@@ -125,7 +125,11 @@ TTS speaks every confirmation and rejection aloud (Web Speech API).
 
 ## Electrical schematic (Wokwi)
 
-See [`hardware/`](hardware/) — a Wokwi Arduino Uno driving **7 servos** (one per joint), wired in [`diagram.json`](hardware/diagram.json). [`firmware.ino`](hardware/firmware.ino) maps the app's joint vector (radians, the same `q[]` the web app prints) onto 0–180° servo angles using the exact limits from [`src/core/chain.ts`](src/core/chain.ts), and runs an idle sine sweep so the servos visibly move. Paste a joint vector over serial (115200 baud) to drive the arm to a pose. Power budget and run steps are in [`hardware/README.md`](hardware/README.md).
+A Wokwi Arduino Uno drives **7 servos** (one per joint), wired in [`diagram.json`](hardware/diagram.json). [`firmware.ino`](hardware/firmware.ino) maps the app's joint vector (radians, the same `q[]` the web app prints) onto 0–180° servo angles using the exact limits from [`src/core/chain.ts`](src/core/chain.ts), and runs an idle sine sweep so the servos visibly move. Paste a joint vector over serial (115200 baud) to drive the arm to a pose.
+
+![Wokwi simulation — 7 servos sweeping](hardware/wokwi-sim.png)
+
+**Verified:** compiles for a real Arduino Uno (`arduino-cli`, 26% flash), and runs in Wokwi — the serial monitor prints the firmware banner and all 7 servo horns sweep. Details, power budget, and run steps in [`hardware/README.md`](hardware/README.md).
 
 ---
 

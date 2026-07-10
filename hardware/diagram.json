@@ -4,13 +4,13 @@
   "editor": "wokwi",
   "parts": [
     { "type": "wokwi-arduino-uno", "id": "uno", "top": 40, "left": 0, "attrs": {} },
-    { "type": "wokwi-servo", "id": "servo1", "top": -220, "left": 320, "attrs": { "hornColor": "#ff5252" } },
-    { "type": "wokwi-servo", "id": "servo2", "top": -120, "left": 320, "attrs": { "hornColor": "#ff9800" } },
-    { "type": "wokwi-servo", "id": "servo3", "top": -20, "left": 320, "attrs": { "hornColor": "#ffeb3b" } },
-    { "type": "wokwi-servo", "id": "servo4", "top": 80, "left": 320, "attrs": { "hornColor": "#4caf50" } },
-    { "type": "wokwi-servo", "id": "servo5", "top": 180, "left": 320, "attrs": { "hornColor": "#2196f3" } },
-    { "type": "wokwi-servo", "id": "servo6", "top": 280, "left": 320, "attrs": { "hornColor": "#3f51b5" } },
-    { "type": "wokwi-servo", "id": "servo7", "top": 380, "left": 320, "attrs": { "hornColor": "#9c27b0" } }
+    { "type": "wokwi-servo", "id": "servo1", "top": -110, "left": 300, "attrs": { "hornColor": "#ff5252" } },
+    { "type": "wokwi-servo", "id": "servo2", "top": -110, "left": 470, "attrs": { "hornColor": "#ff9800" } },
+    { "type": "wokwi-servo", "id": "servo3", "top": 0, "left": 300, "attrs": { "hornColor": "#ffeb3b" } },
+    { "type": "wokwi-servo", "id": "servo4", "top": 0, "left": 470, "attrs": { "hornColor": "#4caf50" } },
+    { "type": "wokwi-servo", "id": "servo5", "top": 110, "left": 300, "attrs": { "hornColor": "#2196f3" } },
+    { "type": "wokwi-servo", "id": "servo6", "top": 110, "left": 470, "attrs": { "hornColor": "#3f51b5" } },
+    { "type": "wokwi-servo", "id": "servo7", "top": 220, "left": 385, "attrs": { "hornColor": "#9c27b0" } }
   ],
   "connections": [
     [ "servo1:PWM", "uno:2", "green", [] ],
