@@ -76,3 +76,26 @@ export const norm = (a: Vec3): number => Math.hypot(a[0], a[1], a[2]);
 export const dist = (a: Vec3, b: Vec3): number => norm(sub(a, b));
 export const clamp = (v: number, lo: number, hi: number): number =>
   v < lo ? lo : v > hi ? hi : v;
+
+/**
+ * Solve A x = b for a small dense square system (Gauss-Jordan, partial pivot).
+ * Used for the damped-least-squares normal equations, where A is SPD thanks to
+ * the λ² damping, so pivots never vanish. A is copied, not mutated.
+ */
+export function solveLinear(A: number[][], b: number[]): number[] {
+  const n = b.length;
+  const M = A.map((row, i) => [...row, b[i]]);
+  for (let col = 0; col < n; col++) {
+    let piv = col;
+    for (let r = col + 1; r < n; r++)
+      if (Math.abs(M[r][col]) > Math.abs(M[piv][col])) piv = r;
+    [M[col], M[piv]] = [M[piv], M[col]];
+    const d = M[col][col] || 1e-12;
+    for (let r = 0; r < n; r++) {
+      if (r === col) continue;
+      const f = M[r][col] / d;
+      for (let c = col; c <= n; c++) M[r][c] -= f * M[col][c];
+    }
+  }
+  return M.map((row, i) => row[n] / (M[i][i] || 1e-12));
+}
