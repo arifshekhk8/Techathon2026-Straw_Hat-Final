@@ -32,7 +32,7 @@ export default function PinPad() {
     <section className="rounded-lg border border-slate-800 bg-slate-900 p-3">
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Autonomous PIN <span className="text-amber-400">· 20%</span>
+          Autonomous PIN
         </h2>
         <span className="font-mono text-[10px] text-slate-500">
           {running ? `${PHASE_LABEL[pp.phase] ?? pp.phase} · key ${pp.pin[pp.index]}` : 'tip ≤ 5 mm = pass'}
