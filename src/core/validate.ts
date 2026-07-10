@@ -1,8 +1,9 @@
 import type { MotionCommand, Digit } from './commands';
 import type { Vec3 } from './math';
-import { add, dist } from './math';
+import { add, dist, clamp } from './math';
 import { fk } from './fk';
-import { CHAIN, NJ, SHOULDER, MAX_REACH, REACH_SAFETY, FLOOR_Z } from './chain';
+import { lowestPoint } from './floor';
+import { CHAIN, NJ, HOME, SHOULDER, MAX_REACH, REACH_SAFETY, FLOOR_Z } from './chain';
 import { KEY_POINTS } from './keys';
 
 export type ValidateResult = { ok: true } | { ok: false; reason: string };
@@ -36,19 +37,51 @@ function reachOk(p: Vec3): ValidateResult {
   return OK;
 }
 
+/**
+ * The surface is solid — reject any pose that would put *any* part of the arm
+ * (not just the tip) below it. Exported so the motion lanes and the IK-solution
+ * check apply the identical rule.
+ */
+export function poseOk(q: number[]): ValidateResult {
+  const low = lowestPoint(q);
+  if (low.z < FLOOR_Z)
+    return {
+      ok: false,
+      reason: `${low.link} would reach ${mm(low.z)} mm — the surface is solid (min ${mm(FLOOR_Z)} mm)`,
+    };
+  return OK;
+}
+
+/** Pose the arm lands in after a single-joint command, for the floor check. */
+function poseWithJoint(q: number[], joint: number, angle: number): number[] {
+  const t = q.slice();
+  t[joint] = angle;
+  return t;
+}
+
 /** The one deterministic gate every input source passes through. */
 export function validate(cmd: MotionCommand, q: number[]): ValidateResult {
   switch (cmd.type) {
     case 'stop':
-    case 'home':
       return OK;
-    case 'jogJoint':
-      return jointIndexOk(cmd.joint);
+    case 'home':
+      return poseOk(HOME);
+    case 'jogJoint': {
+      const idx = jointIndexOk(cmd.joint);
+      if (!idx.ok) return idx;
+      const j = CHAIN[cmd.joint];
+      // The controller clamps the jog step into the joint's range, so validate
+      // the pose it will actually land in rather than the raw request.
+      const target = clamp(q[cmd.joint] + cmd.deltaRad, j.lower, j.upper);
+      return poseOk(poseWithJoint(q, cmd.joint, target));
+    }
     case 'rotateJoint': {
       const idx = jointIndexOk(cmd.joint);
       if (!idx.ok) return idx;
       const target = cmd.toRad ?? q[cmd.joint] + (cmd.deltaRad ?? 0);
-      return angleOk(cmd.joint, target);
+      const ang = angleOk(cmd.joint, target);
+      if (!ang.ok) return ang;
+      return poseOk(poseWithJoint(q, cmd.joint, target));
     }
     case 'jog':
       return reachOk(add(fk(q), cmd.delta));

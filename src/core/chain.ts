@@ -41,7 +41,7 @@ export const MAX_REACH =
 /** Never plan past this fraction of full reach (keeps clear of the full-stretch singularity). */
 export const REACH_SAFETY = 0.97;
 
-/** Tip must stay at least this far above the base floor plane (meters). */
+/** The surface is solid: no part of the arm may go below this height (meters). */
 export const FLOOR_Z = 0.005;
 
 /** Home / FK-anchor pose. */

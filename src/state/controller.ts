@@ -1,7 +1,8 @@
 import { useArmStore } from './store';
 import type { MotionCommand, Source } from '../core/commands';
 import type { Vec3 } from '../core/math';
-import { validate } from '../core/validate';
+import { validate, poseOk } from '../core/validate';
+import { clampToFloor } from '../core/floor';
 import { stepToward } from '../core/executor';
 import { solveIK, cartesianStep } from '../core/ik';
 import { fk } from '../core/fk';
@@ -42,6 +43,8 @@ class MotionController {
   private cartHeld = new Map<string, Vec3>();    // jog id → base-frame direction (magnitude 0..1)
   private cartVel: Vec3 = [0, 0, 0];             // smoothed tip-velocity direction (eased toward held)
   private target: number[] | null = null;
+  private lastSource: Source = 'dashboard';      // whose jog is running — for the event log
+  private contact = false;                       // arm is currently resting on the surface
 
   /** Continuous joint jog (keyboard/joystick hold). */
   beginJog(joint: number, sign: number, source: Source) {
@@ -49,6 +52,7 @@ class MotionController {
     const fresh = !this.held.has(joint);
     this.held.set(joint, Math.sign(sign));
     this.target = null;
+    this.lastSource = source;
     if (fresh)
       useArmStore.getState().log(source, `jog ${CHAIN[joint].label} ${sign > 0 ? '+' : '−'}`);
   }
@@ -61,10 +65,48 @@ class MotionController {
     const fresh = !this.cartHeld.has(id);
     this.cartHeld.set(id, dir);
     this.target = null;
+    this.lastSource = source;
     if (fresh) useArmStore.getState().log(source, `jog tip ${id}`);
   }
   endCartJog(id: string) {
     this.cartHeld.delete(id);
+  }
+
+  /**
+   * Dashboard slider — an absolute per-joint set, applied immediately so the arm
+   * tracks the thumb. Like the joystick it is a *continuous manual* control, so
+   * it slides to contact on the surface rather than refusing outright; the
+   * slider then snaps back to the pose the arm actually reached.
+   */
+  setJoint(joint: number, angle: number, source: Source) {
+    if (joint < 0 || joint >= NJ) return;
+    const j = CHAIN[joint];
+    const q = useArmStore.getState().q.slice();
+    q[joint] = clamp(angle, j.lower, j.upper);
+    this.lastSource = source;
+    this.target = null; // a dragged slider wins over any in-flight eased move
+    this.commit(q);
+  }
+
+  /**
+   * The one place a motion lane writes q. The surface is solid matter, so the
+   * step is slid to contact rather than through: the arm comes to rest flush on
+   * the floor. Returns true when the surface took part of the step away.
+   */
+  private commit(qNext: number[]): boolean {
+    const st = useArmStore.getState();
+    const safe = clampToFloor(st.q, qNext);
+    let blocked = false;
+    for (let i = 0; i < NJ; i++)
+      if (Math.abs(safe[i] - qNext[i]) > 1e-9) { blocked = true; break; }
+    st.setQ(safe);
+    if (blocked && !this.contact) {
+      this.contact = true;
+      st.log(this.lastSource, 'blocked — the arm is resting on the surface', 'warn');
+    } else if (!blocked && this.contact) {
+      this.contact = false;
+    }
+    return blocked;
   }
 
   /** Release every held jog (focus loss / e-stop of the manual lanes).
@@ -78,6 +120,7 @@ class MotionController {
   /** Run a discrete, validated command through the shared gate. */
   dispatch(cmd: MotionCommand): DispatchResult {
     const st = useArmStore.getState();
+    this.lastSource = cmd.source;
     const res = validate(cmd, st.q);
     if (!res.ok) {
       st.log(cmd.source, `rejected ${cmd.type}: ${res.reason}`, 'warn');
@@ -117,6 +160,12 @@ class MotionController {
           st.log(cmd.source, reason, 'warn');
           return { ok: false, reason };
         }
+        // The target point clears the floor, but the pose IK found for it may not.
+        const floor = poseOk(sol.q);
+        if (!floor.ok) {
+          st.log(cmd.source, `rejected jog: ${floor.reason}`, 'warn');
+          return { ok: false, reason: floor.reason };
+        }
         this.target = sol.q;
         const cm = Math.round(Math.max(...cmd.delta.map(Math.abs)) * 100);
         const reason = `jog ${cm} cm — IK residual ${(sol.posErr * 1000).toFixed(1)} mm`;
@@ -129,6 +178,11 @@ class MotionController {
           const reason = `no IK solution — closest ${(sol.posErr * 1000).toFixed(0)} mm off`;
           st.log(cmd.source, `moveTo ${reason}`, 'warn');
           return { ok: false, reason };
+        }
+        const floor = poseOk(sol.q);
+        if (!floor.ok) {
+          st.log(cmd.source, `rejected moveTo: ${floor.reason}`, 'warn');
+          return { ok: false, reason: floor.reason };
         }
         this.target = sol.q;
         const mm = cmd.xyz.map((v) => (v * 1000).toFixed(0)).join(', ');
@@ -171,7 +225,9 @@ class MotionController {
         const q = st.q.slice();
         for (let i = 0; i < NJ; i++)
           q[i] = clamp(q[i] + dq[i] * sc, CHAIN[i].lower, CHAIN[i].upper);
-        st.setQ(q);
+        // Jogging into the surface parks the arm on it; kill the smoothed
+        // velocity so it doesn't keep integrating against a solid plane.
+        if (this.commit(q)) this.cartVel = [0, 0, 0];
       } else {
         this.cartVel = [0, 0, 0];
       }
@@ -184,14 +240,17 @@ class MotionController {
       for (const [j, sign] of this.held)
         q[j] = clamp(q[j] + sign * JOG_RATE * gear * dt, CHAIN[j].lower, CHAIN[j].upper);
       this.target = null;
-      st.setQ(q);
+      this.commit(q);
       return;
     }
 
     if (this.target) {
       const { q, done } = stepToward(st.q, this.target, MOVE_VMAX * dt);
-      st.setQ(q);
-      if (done) this.target = null;
+      // Joint-space interpolation isn't a straight line in Cartesian space, so an
+      // eased move between two legal poses can still swing a link under the
+      // surface. Stop there rather than tunnel through.
+      if (this.commit(q)) this.target = null;
+      else if (done) this.target = null;
     }
   }
 

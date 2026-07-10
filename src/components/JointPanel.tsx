@@ -1,15 +1,15 @@
 import { useArmStore } from '../state/store';
+import { motion } from '../state/controller';
 
 const rad2deg = (r: number) => (r * 180) / Math.PI;
 
 /** Live joint dashboard: 7 rows of angle readout + limit bar + slider.
- *  The sliders are the "dashboard" motion trigger — they write joint targets
- *  into the store, which the render loop applies to the robot. */
+ *  The sliders are the "dashboard" motion trigger. They go through the shared
+ *  motion controller like every other source — never straight into the store —
+ *  so joint limits and the solid surface bound them too. */
 export default function JointPanel() {
   const jointMeta = useArmStore((s) => s.jointMeta);
   const q = useArmStore((s) => s.q);
-  const setJoint = useArmStore((s) => s.setJoint);
-  const setQ = useArmStore((s) => s.setQ);
   const log = useArmStore((s) => s.log);
 
   if (jointMeta.length === 0) {
@@ -25,7 +25,7 @@ export default function JointPanel() {
         <button
           className="rounded bg-slate-700 px-2 py-0.5 text-xs text-slate-200 hover:bg-slate-600"
           onClick={() => {
-            setQ([0, 0, 0, 0, 0, 0, 0]);
+            motion.dispatch({ type: 'home', source: 'dashboard' });
             log('dashboard', 'All joints → 0 (FK anchor pose: TCP must read 0, 0, 1497 mm)');
           }}
         >
@@ -57,7 +57,7 @@ export default function JointPanel() {
                 max={j.upper}
                 step={0.002}
                 value={q[i]}
-                onChange={(e) => setJoint(i, Number(e.target.value))}
+                onChange={(e) => motion.setJoint(i, Number(e.target.value), 'dashboard')}
               />
             </div>
           );

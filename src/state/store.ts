@@ -44,7 +44,7 @@ interface ArmStore {
   /** Manual-jog speed gear (index into JOG_GEARS) — scales joystick + keyboard jog. */
   gear: number;
   setJointMeta: (meta: JointMeta[]) => void;
-  setJoint: (index: number, value: number) => void;
+  /** Raw pose write. Only the motion lanes may call this — they floor-clamp first. */
   setQ: (q: number[]) => void;
   setTcp: (tcp: [number, number, number]) => void;
   setPinProgress: (p: PinProgress) => void;
@@ -62,12 +62,6 @@ export const useArmStore = create<ArmStore>((set) => ({
   pinProgress: IDLE_PIN,
   gear: 1, // Normal
   setJointMeta: (jointMeta) => set({ jointMeta }),
-  setJoint: (index, value) =>
-    set((s) => {
-      const q = s.q.slice();
-      q[index] = value;
-      return { q };
-    }),
   setQ: (q) => set({ q: q.slice() }),
   setTcp: (tcp) => set({ tcp }),
   setPinProgress: (pinProgress) => set({ pinProgress }),
