@@ -83,7 +83,8 @@ export function dispatch(cmd: MotionCommand): DispatchResult {
       ? { ok: true }
       : { ok: false, reason: 'could not start the PIN sequence' };
   }
-  return motion.dispatch(core)
-    ? { ok: true }
-    : { ok: false, reason: "I couldn't find a path to that pose" };
+  // motion.dispatch returns a {ok, reason} record — always truthy. Read the flag,
+  // or a rejected command (no IK solution, surface contact) reports success.
+  const out = motion.dispatch(core);
+  return out.ok ? { ok: true } : { ok: false, reason: out.reason };
 }
