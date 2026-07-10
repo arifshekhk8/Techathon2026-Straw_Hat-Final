@@ -41,11 +41,14 @@ interface ArmStore {
   tcp: [number, number, number];
   events: ArmEvent[];
   pinProgress: PinProgress;
+  /** Manual-jog speed gear (index into JOG_GEARS) — scales joystick + keyboard jog. */
+  gear: number;
   setJointMeta: (meta: JointMeta[]) => void;
   setJoint: (index: number, value: number) => void;
   setQ: (q: number[]) => void;
   setTcp: (tcp: [number, number, number]) => void;
   setPinProgress: (p: PinProgress) => void;
+  setGear: (gear: number) => void;
   log: (source: string, msg: string, level?: EventLevel) => void;
 }
 
@@ -57,6 +60,7 @@ export const useArmStore = create<ArmStore>((set) => ({
   tcp: [0, 0, 0],
   events: [],
   pinProgress: IDLE_PIN,
+  gear: 1, // Normal
   setJointMeta: (jointMeta) => set({ jointMeta }),
   setJoint: (index, value) =>
     set((s) => {
@@ -67,6 +71,7 @@ export const useArmStore = create<ArmStore>((set) => ({
   setQ: (q) => set({ q: q.slice() }),
   setTcp: (tcp) => set({ tcp }),
   setPinProgress: (pinProgress) => set({ pinProgress }),
+  setGear: (gear) => set({ gear }),
   log: (source, msg, level = 'info') =>
     set((s) => ({
       events: [

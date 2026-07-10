@@ -12,12 +12,21 @@ export interface DispatchResult {
   reason: string;
 }
 
-const JOG_RATE = 0.9;       // rad/s — continuous joint jog
-const MOVE_VMAX = 1.2;      // rad/s — eased discrete moves
-const CART_RATE = 0.12;     // m/s — continuous Cartesian jog at full deflection
-const DQ_CAP_FRAME = 0.05;  // rad — per-frame cap for resolved-rate jog
+const JOG_RATE = 0.9;       // rad/s — continuous joint jog (× gear)
+const MOVE_VMAX = 1.2;      // rad/s — eased discrete moves (not geared)
+const CART_RATE = 0.16;     // m/s — continuous Cartesian jog at full deflection (× gear)
+const DQ_CAP_FRAME = 0.05;  // rad — per-frame joint-step cap (× gear, hard-ceiling'd)
+const DQ_CAP_MAX = 0.15;    // rad — absolute per-frame ceiling, keeps Turbo safe near singularities
 const CART_TAU = 0.025;     // s — velocity-smoothing time constant (ramps start, stops < 100 ms)
 const CART_STOP_EPS = 0.02; // below 2 % of full speed the tip is considered at rest
+
+/** Manual-jog speed gears — a multiplier on the jog rates, chosen from the UI or [ ] keys. */
+export const JOG_GEARS: { label: string; mult: number }[] = [
+  { label: 'Fine', mult: 0.35 },
+  { label: 'Normal', mult: 1 },
+  { label: 'Fast', mult: 2.5 },
+  { label: 'Turbo', mult: 5 },
+];
 
 /**
  * The single motion pipeline. Three lanes, all writing store.q (the one source
@@ -120,6 +129,9 @@ class MotionController {
   /** Advance motion by dt seconds. Called from the render frame loop. */
   tick(dt: number) {
     const st = useArmStore.getState();
+    const gear = JOG_GEARS[st.gear]?.mult ?? 1; // manual-jog speed multiplier
+    const cartRate = CART_RATE * gear;
+    const dqCap = Math.min(DQ_CAP_MAX, DQ_CAP_FRAME * gear);
 
     // Cartesian lane — commanded direction is the sum of held jogs (proportional:
     // a partly-deflected joystick summing to < 1 jogs slower). The applied velocity
@@ -134,11 +146,11 @@ class MotionController {
     const speed = norm(this.cartVel);
     if (this.cartHeld.size > 0 || speed > CART_STOP_EPS) {
       if (speed > 1e-4) {
-        const dxyz = scale(this.cartVel, CART_RATE * dt);
+        const dxyz = scale(this.cartVel, cartRate * dt);
         const dq = cartesianStep(st.q, dxyz);
         let maxAbs = 0;
         for (const v of dq) maxAbs = Math.max(maxAbs, Math.abs(v));
-        const sc = maxAbs > DQ_CAP_FRAME ? DQ_CAP_FRAME / maxAbs : 1;
+        const sc = maxAbs > dqCap ? dqCap / maxAbs : 1;
         const q = st.q.slice();
         for (let i = 0; i < NJ; i++)
           q[i] = clamp(q[i] + dq[i] * sc, CHAIN[i].lower, CHAIN[i].upper);
@@ -153,7 +165,7 @@ class MotionController {
     if (this.held.size > 0) {
       const q = st.q.slice();
       for (const [j, sign] of this.held)
-        q[j] = clamp(q[j] + sign * JOG_RATE * dt, CHAIN[j].lower, CHAIN[j].upper);
+        q[j] = clamp(q[j] + sign * JOG_RATE * gear * dt, CHAIN[j].lower, CHAIN[j].upper);
       this.target = null;
       st.setQ(q);
       return;

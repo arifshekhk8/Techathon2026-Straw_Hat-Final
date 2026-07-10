@@ -16,6 +16,7 @@ const CART_ROWS: [string, string][] = [
   ['↑ / ↓', 'Tip ±X'],
   ['← / →', 'Tip ±Y'],
   ['PgUp/Dn', 'Tip ±Z'],
+  ['[ / ]', 'Jog gear −/+'],
   ['0 · Esc', 'Home · Stop'],
 ];
 

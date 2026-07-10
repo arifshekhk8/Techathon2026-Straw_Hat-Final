@@ -1,6 +1,7 @@
 import type { Vec3 } from '../core/math';
-import { motion } from '../state/controller';
+import { motion, JOG_GEARS } from '../state/controller';
 import { pinRunner } from '../state/pinRunner';
+import { useArmStore } from '../state/store';
 
 // Letter keys jog individual joints (hold to jog). key → [joint index, sign]
 const JOG_KEYS: Record<string, [number, number]> = {
@@ -41,6 +42,16 @@ export function installKeyboard(): () => void {
     }
     if (k === '0') {
       motion.dispatch({ type: 'home', source: 'keyboard' });
+      e.preventDefault();
+      return;
+    }
+    if (k === '[' || k === ']') {
+      const st = useArmStore.getState();
+      const next = Math.max(0, Math.min(JOG_GEARS.length - 1, st.gear + (k === ']' ? 1 : -1)));
+      if (next !== st.gear) {
+        st.setGear(next);
+        st.log('keyboard', `gear → ${JOG_GEARS[next].label} (${JOG_GEARS[next].mult}×)`);
+      }
       e.preventDefault();
       return;
     }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { motion } from '../state/controller';
+import { motion, JOG_GEARS } from '../state/controller';
 import { useArmStore } from '../state/store';
 import { fk } from '../core/fk';
 import { SHOULDER, MAX_REACH, FLOOR_Z } from '../core/chain';
@@ -17,6 +17,8 @@ const STALL_MM = 0.03; // per-frame tip travel below which a held jog counts as 
 export default function Joystick() {
   const running = useArmStore((s) => s.pinProgress.running);
   const q = useArmStore((s) => s.q);
+  const gear = useArmStore((s) => s.gear);
+  const setGear = useArmStore((s) => s.setGear);
   const padRef = useRef<HTMLDivElement>(null);
   const active = useRef<Set<string>>(new Set()); // ids currently jogging via this pad
   const prevTip = useRef<Vec3>([0, 0, 0]);
@@ -122,6 +124,29 @@ export default function Joystick() {
         >
           Stop
         </button>
+      </div>
+
+      {/* Speed gear — scales joystick + keyboard jog rate ([ / ] to shift) */}
+      <div className="mb-2">
+        <div className="mb-1 flex items-center justify-between">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Gear</span>
+          <span className="font-mono text-[10px] text-slate-500">{JOG_GEARS[gear].mult}× · [ ]</span>
+        </div>
+        <div className="grid grid-cols-4 gap-1">
+          {JOG_GEARS.map((g, i) => (
+            <button
+              key={g.label}
+              onClick={() => setGear(i)}
+              className={`rounded py-1 text-[11px] font-medium ${
+                i === gear
+                  ? 'bg-sky-600 text-white'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              {g.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex items-center gap-3">
