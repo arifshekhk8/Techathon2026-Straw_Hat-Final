@@ -22,8 +22,9 @@
 #include <ESP32Servo.h>
 
 const int NJ = 7;
-// ESP32 output-capable PWM GPIOs (avoid input-only 34/35/36/39 & strapping pins).
-const int PINS[NJ] = { 13, 12, 14, 27, 26, 25, 33 };
+// ESP32 output-capable PWM GPIOs. Avoids input-only pins (34/35/36/39) and
+// boot-strapping pins (0/2/5/12/15) so a connected servo can't block reset.
+const int PINS[NJ] = { 13, 32, 14, 27, 26, 25, 33 };
 
 // Joint limits (radians) — transcribed from src/core/chain.ts.
 const float LOWER[NJ] = { -3.1416f, -2.0944f, -2.6180f, -3.1416f, -2.0944f, -3.1416f, -2.0944f };

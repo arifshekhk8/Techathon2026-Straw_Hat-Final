@@ -14,7 +14,7 @@
   ],
   "connections": [
     [ "servo1:PWM", "esp:D13", "green", [] ],
-    [ "servo2:PWM", "esp:D12", "green", [] ],
+    [ "servo2:PWM", "esp:D32", "green", [] ],
     [ "servo3:PWM", "esp:D14", "green", [] ],
     [ "servo4:PWM", "esp:D27", "green", [] ],
     [ "servo5:PWM", "esp:D26", "green", [] ],

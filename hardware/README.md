@@ -19,14 +19,16 @@ Electrical lane for the project (PLAN.md §8, rubric: **5%**). Owned by **Member
 | GPIO | Joint (chain.ts order) |
 |------|------------------------|
 | 13 | 1 · base yaw |
-| 12 | 2 · shoulder |
+| 32 | 2 · shoulder |
 | 14 | 3 · elbow |
 | 27 | 4 · forearm roll |
 | 26 | 5 · wrist pitch |
 | 25 | 6 · tool roll |
 | 33 | 7 · stylus pitch |
 
-> Firmware `PINS[] = {13, 12, 14, 27, 26, 25, 33}` matches this joint order 1→7.
+> Firmware `PINS[] = {13, 32, 14, 27, 26, 25, 33}` matches this joint order 1→7.
+> All chosen GPIOs avoid ESP32 input-only pins (34/35/36/39) and boot-strapping
+> pins (0/2/5/12/15).
 
 ## How to run
 
