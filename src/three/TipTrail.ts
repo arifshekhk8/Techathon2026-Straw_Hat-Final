@@ -19,7 +19,8 @@ export class TipTrail {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(this.positions, 3));
     geo.setDrawRange(0, 0);
-    const mat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.75 });
+    // --color-signal: the trail is telemetry, like the numbers in the HUD.
+    const mat = new THREE.LineBasicMaterial({ color: 0x3fe0c8, transparent: true, opacity: 0.7 });
     this.line = new THREE.Line(geo, mat);
     this.line.frustumCulled = false;
   }

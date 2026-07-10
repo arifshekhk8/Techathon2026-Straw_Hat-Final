@@ -6,11 +6,12 @@ export type KeyState = 'idle' | 'target' | 'touched' | 'fail';
 const KEY_SIZE = 0.042;
 const KEY_HEIGHT = 0.012;
 
+// Mirrors the console palette: flare = armed, ok = touched, alarm = missed.
 const STATE_COLORS: Record<KeyState, number> = {
   idle: 0x46536b,
-  target: 0xf2a01d,
-  touched: 0x35c26b,
-  fail: 0xef4444,
+  target: 0xffa519,
+  touched: 0x46d67f,
+  fail: 0xff4257,
 };
 
 export const KEY_POSITIONS: Record<number, [number, number, number]> = Object.fromEntries(

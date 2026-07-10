@@ -31,15 +31,20 @@ export class SceneManager {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     container.appendChild(this.renderer.domElement);
 
+    // Matched to --color-void / --color-hairline in index.css: the scene and the
+    // console around it should read as one machine, not a widget on a page.
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0a101e);
-    this.scene.fog = new THREE.Fog(0x0a101e, 6, 14);
+    this.scene.background = new THREE.Color(0x05070a);
+    this.scene.fog = new THREE.Fog(0x05070a, 5, 13);
 
     this.camera = new THREE.PerspectiveCamera(50, 1, 0.01, 50);
-    this.camera.position.set(1.35, 1.1, 1.35);
+    this.camera.position.set(1.8, 1.4, 1.8);
 
+    // Frame the arm and the keypad together, with the arm's mid-span on the
+    // horizon rather than the floor — the stage is wide and short, and the
+    // stylus must clear the top edge at the fully-extended home pose.
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.target.set(0.3, 0.3, 0);
+    this.controls.target.set(0.3, 0.55, 0.1);
     this.controls.enableDamping = true;
     this.controls.maxDistance = 8;
     this.controls.minDistance = 0.3;
@@ -59,7 +64,7 @@ export class SceneManager {
     fill.position.set(-2, 1.5, -1.5);
     this.scene.add(hemi, dir, fill);
 
-    const grid = new THREE.GridHelper(4, 40, 0x2c3d5c, 0x18233a);
+    const grid = new THREE.GridHelper(4, 40, 0x2c3947, 0x161d27);
     this.scene.add(grid);
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(12, 12),
