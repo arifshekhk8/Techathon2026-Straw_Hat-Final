@@ -4,14 +4,23 @@ Phase 5 electrical PoC (rubric: **5%**). An **ESP32** microcontroller driving
 **7 servos** — one per joint of the arm — **remotely controlled over Wi-Fi**, as
 the problem statement requires.
 
+## Block schematic
+
+![Hardware block schematic — browser over Wi-Fi to ESP32, 7 PWM lines to 7 servos, shared 5 V rail and common ground](system-diagram.png)
+
+<sup>Vector source: [`system-diagram.svg`](system-diagram.svg)</sup>
+
 ## Files
 
 | File | What it is |
 |------|-----------|
+| `system-diagram.svg` / `.png` | Conceptual block schematic — Wi-Fi link, ESP32 driver stage, 7 PWM lines, shared 5 V rail + common GND. |
 | `diagram.json` | Wokwi circuit: **ESP32 DevKit** + 7 servos (PWM on GPIO 13/12/14/27/26/25/33), 5 V power rail, common GND. |
 | `firmware.ino` | ESP32 sketch — joins Wi-Fi, serves a TCP socket on **:8080** that accepts the joint vector (radians), maps each joint to a 0–180° servo angle, and idle-sweeps until a pose arrives. |
 | `libraries.txt` | Declares `ESP32Servo` so Wokwi / arduino-cli resolve the servo driver. |
-| `wokwi-sim.png` | Screenshot of the Wokwi circuit (ESP32 + 7 servos, power + signal wiring). |
+| `wokwi-sim.png` | Screenshot of the as-wired Wokwi circuit (ESP32 + 7 servos, power + signal wiring). |
+
+**As-wired in Wokwi:**
 
 ![Wokwi circuit — ESP32 + 7 servos, Wi-Fi controlled](wokwi-sim.png)
 

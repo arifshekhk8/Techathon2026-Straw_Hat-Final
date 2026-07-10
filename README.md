@@ -21,6 +21,13 @@ A 7-DOF stylus arm, simulated and driven entirely in the browser — **no backen
 
 ## Architecture — one pipeline, five triggers
 
+![System architecture — five command sources funnel through one validate() gate into the motion controller, store, and 3D renderer](docs/architecture.png)
+
+<sup>Vector source: [`docs/architecture.svg`](docs/architecture.svg)</sup>
+
+<details>
+<summary>Text version of the diagram</summary>
+
 ```
   Dashboard   Joystick   Keyboard   Voice / LLM Agent   PIN Runner
       │           │          │              │                │
@@ -53,6 +60,8 @@ A 7-DOF stylus arm, simulated and driven entirely in the browser — **no backen
                               ▼
                  three.js renderer follows q  →  3D arm
 ```
+
+</details>
 
 **Why this matters:** the LLM agent, the mic, and the keyboard are all *just command sources*. They cannot move a joint the validator wouldn't allow. Safety is a property of the architecture, not of any one input's good behaviour. The Event Log makes this visible — every command, validation verdict, and key-touch result lands there with a source tag.
 
@@ -126,6 +135,10 @@ TTS speaks every confirmation and rejection aloud (Web Speech API).
 ## Electrical schematic (Wokwi)
 
 A Wokwi **ESP32** drives **7 servos** (one per joint), **remotely controlled over Wi-Fi** as the brief requires. [`firmware.ino`](hardware/firmware.ino) joins Wi-Fi and serves a TCP socket on `:8080` that accepts the app's joint vector (radians, the same `q[]` the web app prints), mapping each joint onto a 0–180° servo angle using the exact limits from [`src/core/chain.ts`](src/core/chain.ts); it idle-sweeps until a pose arrives. Wiring is in [`diagram.json`](hardware/diagram.json).
+
+![Hardware block schematic — browser over Wi-Fi to ESP32, 7 PWM lines to 7 servos, shared 5 V rail and common ground](hardware/system-diagram.png)
+
+<sup>Conceptual block schematic ([vector source](hardware/system-diagram.svg)). The as-wired Wokwi circuit:</sup>
 
 ![Wokwi circuit — ESP32 + 7 servos, Wi-Fi controlled](hardware/wokwi-sim.png)
 
