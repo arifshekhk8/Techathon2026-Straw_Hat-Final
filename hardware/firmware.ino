@@ -1,24 +1,22 @@
 /*
- * Team Straw Hat — 7-servo robotic-arm firmware (Wokwi simulation)
+ * Team Straw Hat — 7-servo robotic-arm firmware (ESP32 + Wi-Fi, Wokwi PoC)
  *
- * DRAFT — author-generated to match the spec; MUST be verified in Wokwi before
- * the demo (load hardware/diagram.json + this sketch, run, confirm the sweep).
+ * Phase 5 electrical PoC: a servo-driven arm REMOTELY CONTROLLED OVER WI-FI.
+ * The ESP32 joins Wi-Fi and runs a TCP server on :8080 that accepts the joint
+ * vector (radians) — the same q[] the web app prints — so the browser pipeline
+ * can drive the physical arm over the network. Until a client sends a pose, the
+ * arm runs a slow demo sweep so the servos visibly move.
  *
  * Joint order mirrors src/core/chain.ts exactly:
  *   1 base yaw · 2 shoulder · 3 elbow · 4 forearm roll · 5 wrist pitch ·
  *   6 tool roll · 7 stylus pitch
- *
- * Serial protocol @ 115200 baud:
- *   Send a joint vector in RADIANS as a JSON array (the same q[] the web app
- *   prints), e.g.:  [0.0, 1.15, 0.75, 0.0, 0.95, 0.0, 0.45]
- *   Each joint is mapped from its [lower, upper] limit onto the servo's 0-180°.
- *   With no serial input the arm runs a slow sine sweep so the servos visibly
- *   move (matches the "servos sweeping" demo beat in PLAN.md).
  */
-#include <Servo.h>
+#include <WiFi.h>
+#include <ESP32Servo.h>
 
 const int NJ = 7;
-const int PINS[NJ] = { 2, 3, 4, 5, 6, 7, 8 };
+// PWM-capable GPIOs on the ESP32 DevKit (one per joint).
+const int PINS[NJ] = { 13, 12, 14, 27, 26, 25, 33 };
 
 // Joint limits (radians) — transcribed from src/core/chain.ts.
 const float LOWER[NJ] = { -3.1416f, -2.0944f, -2.6180f, -3.1416f, -2.0944f, -3.1416f, -2.0944f };
@@ -29,13 +27,14 @@ Servo servos[NJ];
 float q[NJ] = { 0, 0, 0, 0, 0, 0, 0 };
 bool haveTarget = false;
 
-// Map a joint angle (rad) within its limits onto a 0-180° servo command.
+WiFiServer server(8080);
+
+// Map a joint angle (rad) within its limits onto a 0-180 servo command.
 int toServoDeg(int j, float rad) {
   float v = rad;
   if (v < LOWER[j]) v = LOWER[j];
   if (v > UPPER[j]) v = UPPER[j];
-  float t = (v - LOWER[j]) / (UPPER[j] - LOWER[j]); // 0..1
-  return (int)(t * 180.0f + 0.5f);
+  return (int)((v - LOWER[j]) / (UPPER[j] - LOWER[j]) * 180.0f + 0.5f);
 }
 
 void applyQ() {
@@ -60,30 +59,41 @@ void setup() {
   Serial.begin(115200);
   for (int j = 0; j < NJ; j++) servos[j].attach(PINS[j]);
   applyQ();
-  Serial.println(F("Straw Hat arm ready. Send [j1..j7] radians, or watch the sweep."));
+
+  Serial.print(F("Connecting to Wi-Fi"));
+  WiFi.begin("Wokwi-GUEST", "");
+  while (WiFi.status() != WL_CONNECTED) { delay(250); Serial.print('.'); }
+  Serial.println();
+  Serial.print(F("Straw Hat arm online over Wi-Fi @ "));
+  Serial.println(WiFi.localIP());
+  Serial.println(F("Send [j1..j7] radians to TCP :8080, or watch the sweep."));
+  server.begin();
 }
 
 unsigned long lastMove = 0;
 float phase = 0;
 
 void loop() {
-  if (Serial.available()) {
-    String line = Serial.readStringUntil('\n');
+  // Wi-Fi command path: a client sends the joint vector over the network.
+  WiFiClient client = server.available();
+  if (client) {
+    String line = client.readStringUntil('\n');
     if (parseVector(line)) {
       haveTarget = true;
       applyQ();
-      Serial.print(F("set:"));
+      client.print(F("set:"));
       for (int j = 0; j < NJ; j++) {
-        Serial.print(' '); Serial.print(LABEL[j]);
-        Serial.print('='); Serial.print(toServoDeg(j, q[j]));
+        client.print(' '); client.print(LABEL[j]);
+        client.print('='); client.print(toServoDeg(j, q[j]));
       }
-      Serial.println();
+      client.println();
     } else {
-      Serial.println(F("parse error — expected 7 numbers, e.g. [0,1.15,0.75,0,0.95,0,0.45]"));
+      client.println(F("parse error — expected 7 numbers, e.g. [0,1.15,0.75,0,0.95,0,0.45]"));
     }
+    client.stop();
   }
 
-  // Idle sweep demo until a target vector arrives.
+  // Idle demo sweep until a Wi-Fi pose arrives.
   if (!haveTarget && millis() - lastMove > 20) {
     lastMove = millis();
     phase += 0.02f;

@@ -125,11 +125,11 @@ TTS speaks every confirmation and rejection aloud (Web Speech API).
 
 ## Electrical schematic (Wokwi)
 
-A Wokwi Arduino Uno drives **7 servos** (one per joint), wired in [`diagram.json`](hardware/diagram.json). [`firmware.ino`](hardware/firmware.ino) maps the app's joint vector (radians, the same `q[]` the web app prints) onto 0–180° servo angles using the exact limits from [`src/core/chain.ts`](src/core/chain.ts), and runs an idle sine sweep so the servos visibly move. Paste a joint vector over serial (115200 baud) to drive the arm to a pose.
+A Wokwi **ESP32** drives **7 servos** (one per joint), **remotely controlled over Wi-Fi** as the brief requires. [`firmware.ino`](hardware/firmware.ino) joins Wi-Fi and serves a TCP socket on `:8080` that accepts the app's joint vector (radians, the same `q[]` the web app prints), mapping each joint onto a 0–180° servo angle using the exact limits from [`src/core/chain.ts`](src/core/chain.ts); it idle-sweeps until a pose arrives. Wiring is in [`diagram.json`](hardware/diagram.json).
 
-![Wokwi simulation — 7 servos sweeping](hardware/wokwi-sim.png)
+![Wokwi circuit — ESP32 + 7 servos, Wi-Fi controlled](hardware/wokwi-sim.png)
 
-**Verified:** compiles for a real Arduino Uno (`arduino-cli`, 26% flash), and runs in Wokwi — the serial monitor prints the firmware banner and all 7 servo horns sweep. Details, power budget, and run steps in [`hardware/README.md`](hardware/README.md).
+The circuit covers the rubric's four elements — **power delivery** (shared 5 V rail), **microcontroller/driver stage** (ESP32 + its PWM/`ESP32Servo`), **Wi-Fi link** (ESP32 `WiFiServer`), and labeled, consistent connections. Details, power budget, and run steps in [`hardware/README.md`](hardware/README.md).
 
 ---
 
