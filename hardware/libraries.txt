@@ -1,0 +1,2 @@
+# Wokwi library dependencies (one per line).
+ESP32Servo

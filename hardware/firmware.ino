@@ -1,8 +1,12 @@
 /*
- * Team Straw Hat — 7-servo robotic-arm firmware (Wokwi simulation)
+ * Team Straw Hat — 7-servo robotic-arm firmware (Wokwi simulation, ESP32)
  *
  * DRAFT — author-generated to match the spec; MUST be verified in Wokwi before
  * the demo (load hardware/diagram.json + this sketch, run, confirm the sweep).
+ *
+ * Board: ESP32 DevKit-C. Uses the ESP32Servo library (Arduino Servo API on the
+ * ESP32 LEDC PWM peripheral). Add "ESP32Servo" via the Wokwi Library Manager
+ * (or hardware/libraries.txt).
  *
  * Joint order mirrors src/core/chain.ts exactly:
  *   1 base yaw · 2 shoulder · 3 elbow · 4 forearm roll · 5 wrist pitch ·
@@ -15,10 +19,11 @@
  *   With no serial input the arm runs a slow sine sweep so the servos visibly
  *   move (matches the "servos sweeping" demo beat in PLAN.md).
  */
-#include <Servo.h>
+#include <ESP32Servo.h>
 
 const int NJ = 7;
-const int PINS[NJ] = { 2, 3, 4, 5, 6, 7, 8 };
+// ESP32 output-capable PWM GPIOs (avoid input-only 34/35/36/39 & strapping pins).
+const int PINS[NJ] = { 13, 12, 14, 27, 26, 25, 33 };
 
 // Joint limits (radians) — transcribed from src/core/chain.ts.
 const float LOWER[NJ] = { -3.1416f, -2.0944f, -2.6180f, -3.1416f, -2.0944f, -3.1416f, -2.0944f };
@@ -58,9 +63,17 @@ bool parseVector(const String& line) {
 
 void setup() {
   Serial.begin(115200);
-  for (int j = 0; j < NJ; j++) servos[j].attach(PINS[j]);
+  // ESP32Servo needs LEDC timers allocated before attach (4 timers → up to 16 servos).
+  ESP32PWM::allocateTimer(0);
+  ESP32PWM::allocateTimer(1);
+  ESP32PWM::allocateTimer(2);
+  ESP32PWM::allocateTimer(3);
+  for (int j = 0; j < NJ; j++) {
+    servos[j].setPeriodHertz(50);          // standard 50 Hz servo frame
+    servos[j].attach(PINS[j], 500, 2400);  // min/max pulse width (µs)
+  }
   applyQ();
-  Serial.println(F("Straw Hat arm ready. Send [j1..j7] radians, or watch the sweep."));
+  Serial.println(F("Straw Hat arm ready (ESP32). Send [j1..j7] radians, or watch the sweep."));
 }
 
 unsigned long lastMove = 0;
