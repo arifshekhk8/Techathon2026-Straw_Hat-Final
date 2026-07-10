@@ -4,6 +4,7 @@ import type { Vec3 } from '../core/math';
 import { validate } from '../core/validate';
 import { stepToward } from '../core/executor';
 import { solveIK, cartesianStep } from '../core/ik';
+import { fk } from '../core/fk';
 import { CHAIN, NJ, HOME } from '../core/chain';
 import { clamp, add, norm, scale } from '../core/math';
 
@@ -84,6 +85,20 @@ class MotionController {
         const t = st.q.slice();
         t[cmd.joint] = clamp(st.q[cmd.joint] + cmd.deltaRad, CHAIN[cmd.joint].lower, CHAIN[cmd.joint].upper);
         this.target = t;
+        return true;
+      }
+      case 'jog': {
+        // Discrete Cartesian nudge (voice "move up 2 cm"): ease toward the
+        // current tip + delta via IK, same eased-target lane as moveTo.
+        const target = add(fk(st.q), cmd.delta);
+        const sol = solveIK(target, { seed: st.q });
+        if (!sol.ok) {
+          st.log(cmd.source, `jog did not converge (${(sol.posErr * 1000).toFixed(0)} mm off)`, 'warn');
+          return false;
+        }
+        this.target = sol.q;
+        const cm = Math.round(Math.max(...cmd.delta.map(Math.abs)) * 100);
+        st.log(cmd.source, `jog ${cm} cm — IK ${(sol.posErr * 1000).toFixed(1)} mm`);
         return true;
       }
       case 'moveTo': {
