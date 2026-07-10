@@ -11,11 +11,12 @@ export default function EventLog() {
   const events = useArmStore((s) => s.events);
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col rounded-lg border border-slate-800 bg-slate-900 p-3">
-      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-        Event log
+    <section className="flex flex-col rounded-lg border border-slate-800 bg-slate-900 p-3">
+      <h2 className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <span>Event log</span>
+        {events.length > 0 && <span className="font-mono text-[10px] text-slate-600">{events.length}</span>}
       </h2>
-      <div className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+      <div className="max-h-64 space-y-1 overflow-y-auto pr-1">
         {events.length === 0 && <div className="text-xs text-slate-500">No events yet.</div>}
         {events.map((e) => (
           <div key={e.id} className="text-xs leading-snug">
