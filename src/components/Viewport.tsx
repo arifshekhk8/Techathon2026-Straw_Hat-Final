@@ -4,6 +4,7 @@ import { SceneManager } from '../three/SceneManager';
 import { loadArm } from '../three/loadRobot';
 import { KeyPanel } from '../three/Panel';
 import { useArmStore } from '../state/store';
+import { motion } from '../state/controller';
 
 /** Mounts the three.js scene and bridges it to the zustand store:
  *  store.q  →  robot joints (every frame)
@@ -31,6 +32,7 @@ export default function Viewport() {
       let acc = 0.1; // publish immediately on first frame
 
       offFrame = sm.onFrame((dt) => {
+        motion.tick(dt);
         arm.applyQ(useArmStore.getState().q);
         acc += dt;
         if (acc >= 0.1) {

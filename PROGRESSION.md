@@ -7,7 +7,7 @@
 - [x] **0. Plan approved** — full plan in [PLAN.md](PLAN.md)
 - [x] **1. Scaffold + clean repo** — Vite react-ts, folder structure, .gitignore (secrets ignored in commit #1), assets committed (URDF + key.config + problem PDF), tracking docs, deps installed, GitHub repo live (`arifshekhk8/Techathon2026-Straw_Hat-Final`, 3 collaborators invited), Vercel production deploy working (`techathon2026-straw-hat-final.vercel.app`)
 - [x] **2. Render layer (15%)** — SceneManager + zUpRoot, URDF via ?raw parse, key panel (6 labeled caps, top z=0.05), zustand store, 7 joint sliders + limit bars, TCP readout @10Hz, event log. Build green. *(visual check pending: arm upright + TCP (0,0,1497))*
-- [ ] **3. FK + pipeline skeleton + keyboard (~5%)** — fk/validate tests green, keyboard jog works
+- [x] **3. FK + pipeline skeleton + keyboard (~5%)** — pure-TS core (`math/chain/fk/commands/keys/executor/validate`), `MotionController` (jog + eased moves, one validate() gate, writes store.q), keyboard jog (7 joints, hold-to-jog, Esc=stop, 0=home, input-focus guard). 15/15 vitest green — **FK anchor (0,0,1497) proven independently of three.js**; build green. *(Step-2 visual check still pending before IK.)*
 - [ ] **4. IK — hard timebox 75 min (15%)** — jacobian FD test green, 6 keys <1mm, GotoPanel reaches
 - [ ] **5. Autonomous PIN entry (20%)** — full 6-digit run, per-key ±5mm badges
 - [ ] **6. Joystick + jog polish (10% manual total)** — pad + Z, smooth stop <100ms
@@ -25,6 +25,7 @@
 | ~10:45 | Clean repo created, step 1 in progress |
 | ~10:50 | GitHub repo public + 3 collaborator invites sent; Vercel prod deploy verified (stable alias 200) |
 | ~11:10 | Step 2 render layer built, `npm run build` green, dev server on :5173 |
+| ~11:15 | Step 3 done: pure FK core + shared validate() + MotionController + keyboard jog. 15/15 tests, build green. FK anchor confirmed in unit test. Awaiting user visual check before IK timebox. |
 
 ## Push log (push only after user approval, ~hourly)
 

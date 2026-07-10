@@ -2,6 +2,7 @@ import Viewport from './components/Viewport';
 import TopBar from './components/TopBar';
 import TcpReadout from './components/TcpReadout';
 import JointPanel from './components/JointPanel';
+import ManualPanel from './components/ManualPanel';
 import EventLog from './components/EventLog';
 
 export default function App() {
@@ -15,6 +16,7 @@ export default function App() {
         <aside className="flex w-80 shrink-0 flex-col gap-3 overflow-y-auto border-l border-slate-800 bg-slate-950 p-3 lg:w-96">
           <TcpReadout />
           <JointPanel />
+          <ManualPanel />
           <EventLog />
         </aside>
       </div>

@@ -4,8 +4,9 @@
 
 ## Where we are
 
-- **Current step:** 2 done (render layer, build green) → next is **Step 3: FK core + pipeline skeleton + keyboard jog** (PLAN.md).
-- Dev server: `npm run dev` → http://localhost:5173. Visual checkpoint for user: arm upright, sliders move joints, TCP reads (0, 0, 1497.0) mm at Zero-all.
+- **Current step:** 3 done (pure FK core + shared validate() + MotionController + keyboard jog; 15/15 tests + build green) → next is **Step 4: IK — HARD 75-min timebox** (PLAN.md).
+- **⚠️ BLOCKER before Step 4:** Step-2 visual check still unconfirmed by Arif. Ask him to eyeball http://localhost:5173 (dev server running): arm upright, sliders move all 7 joints, keyboard letter keys jog, "Zero all" ⇒ TCP reads exactly (0.0, 0.0, 1497.0) mm. That is the FK ground-truth anchor for IK. (Pure FK unit test already proves 1.497 independently of three.js — this just confirms the render matches.)
+- Dev server: `npm run dev` → http://localhost:5173 (currently running, HTTP 200).
 - **It is final-day.** Freeze 17:30, submit by 18:15 (hard 18:30), demo after 18:30.
 
 ## Key facts
