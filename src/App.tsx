@@ -8,6 +8,7 @@ import Joystick from './components/Joystick';
 import ManualPanel from './components/ManualPanel';
 import EventLog from './components/EventLog';
 import VoicePanel from './voice/VoicePanel';
+import AgentPanel from './voice/AgentPanel';
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
         <aside className="flex w-80 shrink-0 flex-col gap-3 overflow-y-auto border-l border-slate-800 bg-slate-950 p-3 lg:w-96">
           <TcpReadout />
           <VoicePanel />
+          <AgentPanel />
           <PinPad />
           <GotoPanel />
           <JointPanel />

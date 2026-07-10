@@ -1,10 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+/**
+ * Phase 3 — Voice control (required, deterministic).
+ *
+ * Maps spoken/typed keyword commands onto the same motion pipeline every other
+ * input uses. Deliberately self-contained: no LLM, no API key, no network. The
+ * rulebook is explicit that "the optional agentic extension (Phase 3B) does not
+ * replace the required deterministic voice control (Phase 3) — baselines must
+ * still work independently and will be judged as such", so this panel never
+ * defers to the agent. Phase 3B lives beside it in AgentPanel.
+ */
+import { useEffect, useRef, useState } from 'react';
 import { parse, isError, JOINT_LABELS } from './grammar';
 import { dispatch, type MotionCommand } from './pipeline';
 import { speak, cancelSpeech } from './tts';
 import { useSpeechRecognition } from './useSpeechRecognition';
-import { runAgent, type CommandStatus } from '../agent/agentLoop';
-import { hasApiKey, setApiKey, clearApiKey, PRIMARY_MODEL } from '../agent/groqClient';
 
 /** Short spoken/visible confirmation for a command the deterministic grammar ran. */
 function confirm(cmd: MotionCommand): string {
@@ -34,118 +42,45 @@ function confirm(cmd: MotionCommand): string {
   }
 }
 
-/**
- * Natural-language phrases the fast grammar can't fully capture — multi-step
- * ("… then …", "twice") or free-form — get routed to the LLM agent instead of
- * the grammar's greedy first-command match.
- */
-function looksAgenty(text: string): boolean {
-  return /\b(then|and then|after that|afterwards|followed by|next|twice|thrice|three times|four times)\b/i.test(text)
-    || (text.match(/,/g)?.length ?? 0) >= 1;
-}
+type Feedback = { kind: 'ok' | 'reject' | 'error'; text: string } | null;
 
-type FbKind = 'ok' | 'reject' | 'error' | 'clarify' | 'agent';
-type Feedback = { kind: FbKind; text: string; via?: 'grammar' | 'AI' } | null;
+const EXAMPLES = ['home', 'rotate base 30 degrees', 'move up 2 cm', 'touch key 5', 'stop'];
 
-const BADGE: Record<CommandStatus['state'], string> = {
-  pending: 'border-slate-700 text-slate-500',
-  running: 'border-sky-500 text-sky-300 animate-pulse',
-  ok: 'border-emerald-600 text-emerald-300',
-  rejected: 'border-rose-600 text-rose-300',
-};
-
-/**
- * Unified voice control: one mic + one box. Simple commands run instantly on the
- * deterministic grammar (offline, no key); natural / multi-step phrases fall back
- * to the LLM agent. Both paths funnel through the same validate() gate.
- */
 export default function VoicePanel() {
   const [typed, setTyped] = useState('');
   const [heard, setHeard] = useState('');
   const [feedback, setFeedback] = useState<Feedback>(null);
-  const [statuses, setStatuses] = useState<CommandStatus[]>([]);
-  const [busy, setBusy] = useState(false);
   const holding = useRef(false);
-
-  // Groq key management (only needed for the AI fallback).
-  const [keyed, setKeyed] = useState(hasApiKey());
-  const [showKey, setShowKey] = useState(false);
-  const [keyInput, setKeyInput] = useState('');
 
   useEffect(() => () => cancelSpeech(), []);
 
-  const saveKey = () => {
-    if (!keyInput.trim()) return;
-    setApiKey(keyInput);
-    setKeyInput('');
-    setKeyed(true);
-    setShowKey(false);
-  };
-  const forgetKey = () => {
-    clearApiKey();
-    setKeyed(false);
-  };
+  /** The one path both the mic and the typed box run through. Grammar only. */
+  const run = (utterance: string) => {
+    setHeard(utterance);
+    const result = parse(utterance);
 
-  /** Run the natural-language phrase through the LLM agent. */
-  const runViaAgent = useCallback(async (utterance: string) => {
-    setBusy(true);
-    setStatuses([]);
-    try {
-      const res = await runAgent(utterance, {
-        onPlan: (p) =>
-          setFeedback({ kind: p.needs_clarification ? 'clarify' : 'agent', text: p.speech, via: 'AI' }),
-        onStatus: setStatuses,
-      });
-      const kind: FbKind = res.ok ? 'ok' : res.clarify ? 'clarify' : 'reject';
-      setFeedback({ kind, text: res.speech, via: 'AI' });
-      speak(res.speech);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Agent failed.';
-      setFeedback({ kind: 'error', text: msg, via: 'AI' });
-    } finally {
-      setBusy(false);
+    if (isError(result)) {
+      setFeedback({ kind: 'error', text: result.error });
+      speak(result.error);
+      return;
     }
-  }, []);
-
-  // The single path both mic and typed box run through.
-  const run = useCallback(
-    (utterance: string) => {
-      setHeard(utterance);
-      setStatuses([]);
-
-      // Prefer the AI for multi-step / free-form phrasing when a key is available.
-      if (!(keyed && looksAgenty(utterance))) {
-        const result = parse(utterance);
-        if (!isError(result)) {
-          const outcome = dispatch(result);
-          if (outcome.ok) {
-            const msg = confirm(result);
-            setFeedback({ kind: 'ok', text: msg, via: 'grammar' });
-            speak(msg);
-          } else {
-            const msg = `Can't do that: ${outcome.reason}.`;
-            setFeedback({ kind: 'reject', text: msg, via: 'grammar' });
-            speak(msg);
-          }
-          return;
-        }
-        // Grammar couldn't parse it — hand off to the AI if we have a key.
-        if (!keyed) {
-          setFeedback({ kind: 'error', text: result.error, via: 'grammar' });
-          speak(result.error);
-          return;
-        }
-      }
-      void runViaAgent(utterance);
-    },
-    [keyed, runViaAgent],
-  );
+    const outcome = dispatch(result);
+    if (outcome.ok) {
+      const msg = confirm(result);
+      setFeedback({ kind: 'ok', text: msg });
+      speak(msg);
+    } else {
+      const msg = `Can't do that: ${outcome.reason}.`;
+      setFeedback({ kind: 'reject', text: msg });
+      speak(msg);
+    }
+  };
 
   const rec = useSpeechRecognition(run);
 
   const submitTyped = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!typed.trim() || busy) return;
+    if (!typed.trim()) return;
     run(typed);
     setTyped('');
   };
@@ -167,11 +102,7 @@ export default function VoicePanel() {
       ? 'text-emerald-300'
       : feedback?.kind === 'reject'
         ? 'text-amber-300'
-        : feedback?.kind === 'clarify'
-          ? 'text-sky-300'
-          : feedback?.kind === 'agent'
-            ? 'text-indigo-300'
-            : 'text-rose-300';
+        : 'text-rose-300';
 
   return (
     <section className="rounded-lg border border-slate-800 bg-slate-900 p-3">
@@ -179,50 +110,13 @@ export default function VoicePanel() {
         <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
           Voice control
         </h2>
-        <button
-          type="button"
-          onClick={() => setShowKey((v) => !v)}
-          title="Groq API key — enables the AI fallback"
-          className="rounded px-1.5 py-0.5 text-[11px] text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+        <span
+          title="Deterministic keyword grammar — runs offline, no API key"
+          className="rounded border border-emerald-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-emerald-400"
         >
-          ⚙ {keyed ? 'AI on' : 'AI off'}
-        </button>
+          Phase 3 · offline
+        </span>
       </div>
-
-      {showKey && (
-        <div className="mb-2 rounded-md border border-slate-800 bg-slate-950 p-2">
-          <p className="mb-1 text-[11px] text-slate-500">
-            Groq API key — enables natural-language & multi-step commands. Stored only in this
-            browser; simple commands work without it.
-          </p>
-          <div className="flex gap-2">
-            <input
-              type="password"
-              value={keyInput}
-              onChange={(e) => setKeyInput(e.target.value)}
-              placeholder="gsk_…"
-              className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-slate-500 focus:outline-none"
-            />
-            <button
-              type="button"
-              onClick={saveKey}
-              className="rounded-md bg-slate-700 px-3 py-1.5 text-sm text-slate-100 hover:bg-slate-600"
-            >
-              Save
-            </button>
-            {keyed && (
-              <button
-                type="button"
-                onClick={forgetKey}
-                className="rounded-md bg-rose-700/70 px-2 py-1.5 text-sm text-white hover:bg-rose-600"
-              >
-                Forget
-              </button>
-            )}
-          </div>
-          <p className="mt-1 text-[10px] text-slate-600">Model: {PRIMARY_MODEL}</p>
-        </div>
-      )}
 
       {rec.supported ? (
         <button
@@ -231,8 +125,7 @@ export default function VoicePanel() {
           onPointerUp={pttUp}
           onPointerLeave={pttUp}
           onContextMenu={(e) => e.preventDefault()}
-          disabled={busy}
-          className={`mb-2 w-full select-none rounded-md px-3 py-2 text-sm font-medium transition disabled:opacity-50 ${
+          className={`mb-2 w-full select-none rounded-md px-3 py-2 text-sm font-medium transition ${
             rec.listening ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-100 hover:bg-slate-700'
           }`}
         >
@@ -248,16 +141,14 @@ export default function VoicePanel() {
         <input
           value={typed}
           onChange={(e) => setTyped(e.target.value)}
-          disabled={busy}
-          placeholder={keyed ? 'e.g. "tap key 5 twice then lift 2 cm"' : 'e.g. "rotate base 30 degrees"'}
-          className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-slate-500 focus:outline-none disabled:opacity-50"
+          placeholder='e.g. "rotate base 30 degrees"'
+          className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-slate-500 focus:outline-none"
         />
         <button
           type="submit"
-          disabled={busy}
-          className="rounded-md bg-slate-700 px-3 py-1.5 text-sm text-slate-100 hover:bg-slate-600 disabled:opacity-50"
+          className="rounded-md bg-slate-700 px-3 py-1.5 text-sm text-slate-100 hover:bg-slate-600"
         >
-          {busy ? '…' : 'Send'}
+          Send
         </button>
       </form>
 
@@ -270,37 +161,22 @@ export default function VoicePanel() {
         </p>
       )}
 
-      {feedback && (
+      {feedback ? (
         <p className={`text-xs ${fbColor}`}>
-          {feedback.via && (
-            <span className="mr-1 rounded bg-slate-800 px-1 py-0.5 text-[10px] uppercase tracking-wide text-slate-400">
-              {feedback.via}
+          <span className="mr-1 rounded bg-slate-800 px-1 py-0.5 text-[10px] uppercase tracking-wide text-slate-400">
+            grammar
+          </span>
+          {feedback.text}
+          {feedback.kind === 'error' && (
+            <span className="mt-1 block text-slate-500">
+              Multi-step or free-form phrasing? Use the agentic panel below.
             </span>
           )}
-          {feedback.text}
         </p>
-      )}
-
-      {statuses.length > 0 && (
-        <ul className="mt-1 flex flex-col gap-1">
-          {statuses.map((s, i) => (
-            <li
-              key={i}
-              className={`flex items-center justify-between rounded border px-2 py-1 text-[11px] ${BADGE[s.state]}`}
-            >
-              <span>{s.label}</span>
-              <span className="ml-2 shrink-0 font-mono">
-                {s.state === 'ok'
-                  ? '✓'
-                  : s.state === 'rejected'
-                    ? `✗ ${s.reason ?? ''}`
-                    : s.state === 'running'
-                      ? '…'
-                      : '·'}
-              </span>
-            </li>
-          ))}
-        </ul>
+      ) : (
+        <p className="text-[11px] text-slate-600">
+          Try: {EXAMPLES.map((e) => `"${e}"`).join(' · ')}
+        </p>
       )}
     </section>
   );
