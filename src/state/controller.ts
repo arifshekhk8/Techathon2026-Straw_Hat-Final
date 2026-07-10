@@ -7,6 +7,11 @@ import { solveIK, cartesianStep } from '../core/ik';
 import { CHAIN, NJ, HOME } from '../core/chain';
 import { clamp, add, norm, scale } from '../core/math';
 
+export interface DispatchResult {
+  ok: boolean;
+  reason: string;
+}
+
 const JOG_RATE = 0.9;       // rad/s — continuous joint jog
 const MOVE_VMAX = 1.2;      // rad/s — eased discrete moves
 const CART_RATE = 0.12;     // m/s — continuous Cartesian jog
@@ -56,51 +61,54 @@ class MotionController {
   }
 
   /** Run a discrete, validated command through the shared gate. */
-  dispatch(cmd: MotionCommand): boolean {
+  dispatch(cmd: MotionCommand): DispatchResult {
     const st = useArmStore.getState();
     const res = validate(cmd, st.q);
     if (!res.ok) {
       st.log(cmd.source, `rejected ${cmd.type}: ${res.reason}`, 'warn');
-      return false;
+      return { ok: false, reason: res.reason };
     }
     switch (cmd.type) {
       case 'stop':
         this.releaseAll();
         this.target = null;
         st.log(cmd.source, 'stop');
-        return true;
+        return { ok: true, reason: 'stopped' };
       case 'home':
         this.target = HOME.slice();
         st.log(cmd.source, 'home → all joints 0');
-        return true;
+        return { ok: true, reason: 'homing' };
       case 'rotateJoint': {
         const t = st.q.slice();
         t[cmd.joint] = cmd.toRad ?? st.q[cmd.joint] + (cmd.deltaRad ?? 0);
         this.target = t;
-        st.log(cmd.source, `${CHAIN[cmd.joint].label} → ${((t[cmd.joint] * 180) / Math.PI).toFixed(0)}°`);
-        return true;
+        const deg = `${((t[cmd.joint] * 180) / Math.PI).toFixed(0)}°`;
+        st.log(cmd.source, `${CHAIN[cmd.joint].label} → ${deg}`);
+        return { ok: true, reason: `${CHAIN[cmd.joint].label} → ${deg}` };
       }
       case 'jogJoint': {
         const t = st.q.slice();
         t[cmd.joint] = clamp(st.q[cmd.joint] + cmd.deltaRad, CHAIN[cmd.joint].lower, CHAIN[cmd.joint].upper);
         this.target = t;
-        return true;
+        return { ok: true, reason: 'jog' };
       }
       case 'moveTo': {
         const sol = solveIK(cmd.xyz, { tipDown: cmd.tipDown ?? false, seed: st.q });
         if (!sol.ok) {
-          st.log(cmd.source, `moveTo did not converge (${(sol.posErr * 1000).toFixed(0)} mm off)`, 'warn');
-          return false;
+          const reason = `no IK solution — closest ${(sol.posErr * 1000).toFixed(0)} mm off`;
+          st.log(cmd.source, `moveTo ${reason}`, 'warn');
+          return { ok: false, reason };
         }
         this.target = sol.q;
         const mm = cmd.xyz.map((v) => (v * 1000).toFixed(0)).join(', ');
+        const reason = `solved — IK residual ${(sol.posErr * 1000).toFixed(1)} mm`;
         st.log(cmd.source, `moveTo (${mm}) mm — IK ${(sol.posErr * 1000).toFixed(1)} mm`);
-        return true;
+        return { ok: true, reason };
       }
       default:
         // touchKey / typePin — the PIN state machine (Step 5).
         st.log(cmd.source, `${cmd.type} arrives with the PIN sequence`, 'warn');
-        return false;
+        return { ok: false, reason: `${cmd.type} runs via the PIN pad` };
     }
   }
 

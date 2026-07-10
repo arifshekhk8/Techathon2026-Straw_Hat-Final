@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion } from '../state/controller';
+import type { DispatchResult } from '../state/controller';
 import { precomputeKeyPoses } from '../core/ik';
 import type { Digit } from '../core/commands';
 
@@ -10,13 +11,17 @@ export default function GotoPanel() {
   const [y, setY] = useState('0');
   const [z, setZ] = useState('150');
   const [tipDown, setTipDown] = useState(true);
+  const [status, setStatus] = useState<DispatchResult | null>(null);
 
   const reach = useMemo(() => precomputeKeyPoses(), []);
 
   const go = () => {
     const xyz: [number, number, number] = [Number(x) / 1000, Number(y) / 1000, Number(z) / 1000];
-    if (xyz.some((v) => Number.isNaN(v))) return;
-    motion.dispatch({ type: 'moveTo', xyz, tipDown, source: 'dashboard' });
+    if (xyz.some((v) => Number.isNaN(v))) {
+      setStatus({ ok: false, reason: 'enter numbers for X, Y, Z' });
+      return;
+    }
+    setStatus(motion.dispatch({ type: 'moveTo', xyz, tipDown, source: 'dashboard' }));
   };
 
   const field = (label: string, val: string, set: (s: string) => void) => (
@@ -54,6 +59,17 @@ export default function GotoPanel() {
           Go
         </button>
       </div>
+
+      {status && (
+        <div
+          className={`mt-2 rounded px-2 py-1 font-mono text-[11px] ${
+            status.ok ? 'bg-emerald-600/20 text-emerald-300' : 'bg-rose-700/25 text-rose-200'
+          }`}
+        >
+          {status.ok ? '✓ ' : '✗ rejected — '}
+          {status.reason}
+        </div>
+      )}
 
       <div className="mt-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
         Key reachability (IK)
