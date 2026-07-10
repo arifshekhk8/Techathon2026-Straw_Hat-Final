@@ -92,6 +92,8 @@ Clocks assume build start ~10:45; if later, shift and reclaim from the 18:30–2
 
 Cut priority when behind (first→last): Whisper stretch → agent 3B → UI polish → voice(→typed) → joystick (keyboard covers Manual) → live IK(→stored poses). **Never cut:** visualization, PIN, README/architecture, Wokwi, submission.
 
+**Commit rules (user-set):** clear conventional messages; **NEVER add any AI co-author tag or Claude attribution to commits**; push only after Arif approves (~hourly). Repo is **PRIVATE during the day** to hide work from competitors — **MUST be flipped to PUBLIC at the 17:30 freeze checklist, before submission** (`gh repo edit --visibility public`).
+
 ## Top risks
 
 1. IK rabbit hole → FD-test first, FK anchor 1.497m, 75-min timebox → precomputed poses.

@@ -30,4 +30,5 @@
 
 | Time | Commit(s) | Approved by |
 |---|---|---|
-| — | — | — |
+| ~10:50 | `bbccad1` scaffold (pushed at repo creation) | Arif (repo-creation request) |
+| ~11:25 | `dc00e50` render layer + history rewrite (co-author tags stripped, force-push) | Arif (tag-removal request) |
