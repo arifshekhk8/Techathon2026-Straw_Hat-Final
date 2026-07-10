@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { installKeyboard } from '../input/keyboard';
 import { motion } from '../state/controller';
 
-const ROWS: [string, string][] = [
+const JOINT_ROWS: [string, string][] = [
   ['A / D', 'Base yaw'],
   ['W / S', 'Shoulder'],
   ['Q / E', 'Elbow'],
@@ -10,8 +10,13 @@ const ROWS: [string, string][] = [
   ['R / F', 'Wrist pitch'],
   ['T / G', 'Tool roll'],
   ['Y / H', 'Stylus pitch'],
-  ['0', 'Home'],
-  ['Esc', 'Stop'],
+];
+
+const CART_ROWS: [string, string][] = [
+  ['↑ / ↓', 'Tip ±X'],
+  ['← / →', 'Tip ±Y'],
+  ['PgUp/Dn', 'Tip ±Z'],
+  ['0 · Esc', 'Home · Stop'],
 ];
 
 /** Keyboard manual-control legend. Mounting this installs the key listeners. */
@@ -32,7 +37,7 @@ export default function ManualPanel() {
         </button>
       </div>
       <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
-        {ROWS.map(([keys, label]) => (
+        {JOINT_ROWS.map(([keys, label]) => (
           <div key={keys} className="flex items-center justify-between">
             <kbd className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-sky-300">
               {keys}
@@ -41,9 +46,20 @@ export default function ManualPanel() {
           </div>
         ))}
       </dl>
-      <p className="mt-2 text-[10px] text-slate-500">
-        Hold a key to jog that joint. Cartesian tip jog arrives with IK.
-      </p>
+      <div className="mt-2 mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+        Cartesian tip · resolved-rate IK
+      </div>
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
+        {CART_ROWS.map(([keys, label]) => (
+          <div key={keys} className="flex items-center justify-between">
+            <kbd className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-emerald-300">
+              {keys}
+            </kbd>
+            <span className="text-xs text-slate-400">{label}</span>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-2 text-[10px] text-slate-500">Hold a key to jog. Esc stops all motion.</p>
     </section>
   );
 }

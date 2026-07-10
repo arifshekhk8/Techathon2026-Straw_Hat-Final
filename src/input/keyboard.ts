@@ -1,8 +1,7 @@
+import type { Vec3 } from '../core/math';
 import { motion } from '../state/controller';
 
-// Letter keys jog individual joints (hold to jog). Arrow / Cartesian jog arrives
-// with the IK layer, so it stays off the letter keys to avoid any remap later.
-// key → [joint index, sign]
+// Letter keys jog individual joints (hold to jog). key → [joint index, sign]
 const JOG_KEYS: Record<string, [number, number]> = {
   a: [0, +1], d: [0, -1], // J1 base yaw
   w: [1, +1], s: [1, -1], // J2 shoulder
@@ -11,6 +10,16 @@ const JOG_KEYS: Record<string, [number, number]> = {
   r: [4, +1], f: [4, -1], // J5 wrist pitch
   t: [5, +1], g: [5, -1], // J6 tool roll
   y: [6, +1], h: [6, -1], // J7 stylus pitch
+};
+
+// Arrow / Page keys jog the tip in the base frame (resolved-rate IK).
+const CART_KEYS: Record<string, { dir: Vec3; id: string }> = {
+  arrowup: { dir: [1, 0, 0], id: '+x' },
+  arrowdown: { dir: [-1, 0, 0], id: '-x' },
+  arrowleft: { dir: [0, 1, 0], id: '+y' },
+  arrowright: { dir: [0, -1, 0], id: '-y' },
+  pageup: { dir: [0, 0, 1], id: '+z' },
+  pagedown: { dir: [0, 0, -1], id: '-z' },
 };
 
 function isTyping(el: EventTarget | null): boolean {
@@ -37,16 +46,23 @@ export function installKeyboard(): () => void {
     if (map) {
       if (!e.repeat) motion.beginJog(map[0], map[1], 'keyboard');
       e.preventDefault();
+      return;
+    }
+    const cart = CART_KEYS[k];
+    if (cart) {
+      if (!e.repeat) motion.beginCartJog(cart.id, cart.dir, 'keyboard');
+      e.preventDefault();
     }
   };
   const up = (e: KeyboardEvent) => {
-    const map = JOG_KEYS[e.key.toLowerCase()];
+    const k = e.key.toLowerCase();
+    const map = JOG_KEYS[k];
     if (map) motion.endJog(map[0]);
+    const cart = CART_KEYS[k];
+    if (cart) motion.endCartJog(cart.id);
   };
-  // Releasing focus (alt-tab, click-away) must not leave a joint jogging forever.
-  const stopAll = () => {
-    for (let i = 0; i < 7; i++) motion.endJog(i);
-  };
+  // Releasing focus (alt-tab, click-away) must not leave anything jogging forever.
+  const stopAll = () => motion.releaseAll();
 
   window.addEventListener('keydown', down);
   window.addEventListener('keyup', up);

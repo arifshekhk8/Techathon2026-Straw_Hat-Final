@@ -100,6 +100,33 @@ export function solveIK(target: Vec3, opts: IkOptions = {}): IkResult {
   return best as IkResult;
 }
 
+/**
+ * One resolved-rate DLS step: joint deltas that move the tip by dxyz (position
+ * only). Called per-frame for continuous Cartesian jog — no queued segments.
+ */
+export function cartesianStep(q: number[], dxyz: Vec3): number[] {
+  const { J } = geometricJacobian(q);
+  const Jv = [J[0], J[1], J[2]]; // 3 × 7 position block
+  const A: number[][] = [];
+  for (let r = 0; r < 3; r++) {
+    const row = [0, 0, 0];
+    for (let c = 0; c < 3; c++) {
+      let s = 0;
+      for (let i = 0; i < NJ; i++) s += Jv[r][i] * Jv[c][i];
+      row[c] = s + (r === c ? LAMBDA2 : 0);
+    }
+    A.push(row);
+  }
+  const y = solveLinear(A, [dxyz[0], dxyz[1], dxyz[2]]);
+  const dq = new Array<number>(NJ).fill(0);
+  for (let i = 0; i < NJ; i++) {
+    let s = 0;
+    for (let r = 0; r < 3; r++) s += Jv[r][i] * y[r];
+    dq[i] = s;
+  }
+  return dq;
+}
+
 export interface KeyPose {
   key: Digit;
   hover: number[];
