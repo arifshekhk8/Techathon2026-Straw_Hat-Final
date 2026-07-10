@@ -125,7 +125,7 @@ TTS speaks every confirmation and rejection aloud (Web Speech API).
 
 ## Electrical schematic (Wokwi)
 
-_Partner lane (`hardware/`) — Wokwi schematic + `firmware.ino` that sweeps the servos from pasted joint JSON. Screenshot + link added on integration._
+See [`hardware/`](hardware/) — a Wokwi Arduino Uno driving **7 servos** (one per joint), wired in [`diagram.json`](hardware/diagram.json). [`firmware.ino`](hardware/firmware.ino) maps the app's joint vector (radians, the same `q[]` the web app prints) onto 0–180° servo angles using the exact limits from [`src/core/chain.ts`](src/core/chain.ts), and runs an idle sine sweep so the servos visibly move. Paste a joint vector over serial (115200 baud) to drive the arm to a pose. Power budget and run steps are in [`hardware/README.md`](hardware/README.md).
 
 ---
 
