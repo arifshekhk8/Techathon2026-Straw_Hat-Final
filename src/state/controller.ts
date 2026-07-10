@@ -113,13 +113,15 @@ class MotionController {
         const target = add(fk(st.q), cmd.delta);
         const sol = solveIK(target, { seed: st.q });
         if (!sol.ok) {
-          st.log(cmd.source, `jog did not converge (${(sol.posErr * 1000).toFixed(0)} mm off)`, 'warn');
-          return false;
+          const reason = `jog did not converge (${(sol.posErr * 1000).toFixed(0)} mm off)`;
+          st.log(cmd.source, reason, 'warn');
+          return { ok: false, reason };
         }
         this.target = sol.q;
         const cm = Math.round(Math.max(...cmd.delta.map(Math.abs)) * 100);
-        st.log(cmd.source, `jog ${cm} cm — IK ${(sol.posErr * 1000).toFixed(1)} mm`);
-        return true;
+        const reason = `jog ${cm} cm — IK residual ${(sol.posErr * 1000).toFixed(1)} mm`;
+        st.log(cmd.source, reason);
+        return { ok: true, reason };
       }
       case 'moveTo': {
         const sol = solveIK(cmd.xyz, { tipDown: cmd.tipDown ?? false, seed: st.q });
