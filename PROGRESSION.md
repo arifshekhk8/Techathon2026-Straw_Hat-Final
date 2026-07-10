@@ -10,7 +10,7 @@
 - [x] **3. FK + pipeline skeleton + keyboard (~5%)** — pure-TS core (`math/chain/fk/commands/keys/executor/validate`), `MotionController` (jog + eased moves, one validate() gate, writes store.q), keyboard jog (7 joints, hold-to-jog, Esc=stop, 0=home, input-focus guard). 15/15 vitest green — **FK anchor (0,0,1497) proven independently of three.js**; build green. *(Step-2 visual check still pending before IK.)*
 - [x] **4. IK — hard timebox 75 min (15%)** — jacobian FD-verified, DLS solver (λ=0.08, dq cap, tip-down weighted), all 6 keys hover+touch <1mm, precomputeKeyPoses (PIN safety net), reachability chips, GotoPanel (xyz→moveTo via IK), resolved-rate Cartesian jog (arrow/Page keys). 20/20 tests + build green.
 - [x] **5. Autonomous PIN entry (20%)** — PinRunner state machine (transit→settle→pure −z descend→dwell 400ms→retract), success = FK of executed pose ≤5mm, per-key green/red mm badges, key highlights, TipTrail, Esc-abort. pure `pin.ts` + tests. **Browser-verified: PIN 156 → 3/3 within ~1mm.** 24/24 tests + build green.
-- [ ] **6. Joystick + jog polish (10% manual total)** — pad + Z, smooth stop <100ms
+- [x] **6. Joystick + jog polish (10% manual total)** — GUI joystick (XY pad + Z-hold buttons) on the shared Cartesian jog lane; proportional speed (partial deflection = slower), velocity-smoothed start + sub-100ms smooth stop (CART_TAU 25ms), workspace-limit badge (reach %/floor), jog blocked during PIN except Stop. **Browser-verified:** pad +X → tip 0→50mm; off-singularity Z-down → −45mm; PIN run disables pad. 24/24 tests + build green.
 - [ ] **7. Deterministic voice + TTS (15%)** — "rotate base 30 degrees" + dictated PIN + typed box offline
 - [ ] **8. Wokwi + firmware.ino (5%)** — PARTNER LANE — sim runs, servos sweep from pasted JSON, screenshot committed
 - [ ] **9. GATE → agentic 3B (+10%)** — multi-step utterance executes, red-team refusal visible
@@ -28,6 +28,7 @@
 | ~11:15 | Step 3 done: pure FK core + shared validate() + MotionController + keyboard jog. 15/15 tests, build green. FK anchor confirmed in unit test. Awaiting user visual check before IK timebox. |
 | ~11:30 | Arif confirmed Step-2 visual check ✓. Attribution: golammoula287 added as co-author on steps 1–2 (his lane), force-pushed `b4208f7`. |
 | ~11:35 | Step 4 done (IK) well inside 75-min box. Jacobian FD-verified, DLS, GotoPanel, Cartesian jog, reachability chips. 20/20 tests. **Browser-verified via headless Chrome + CDP**: render+anchor (0,0,1497), all 6 keys green, Go→(549.9,0,150.0) tip-down, +x jog→154mm@0.12m/s, zero page errors. |
+| ~13:10 | Step 6 done (joystick + jog polish, 10% manual). GUI XY pad + Z-hold buttons on the shared Cartesian jog lane; controller now smooths tip velocity (CART_TAU 25ms → soft start, sub-100ms stop) and scales speed by deflection; workspace-limit badge; jog blocked during PIN (only Stop live). **Browser-verified**: pad +X→50mm, off-singularity Z-down→−45mm, PIN disables pad, no page errors. Note: pure-Z jog from the exact-vertical home is correctly damped (singularity) — badge shows "near reach limit". 24/24 tests + build green. Committed, awaiting push approval. |
 
 ## Push log (push only after user approval, ~hourly)
 

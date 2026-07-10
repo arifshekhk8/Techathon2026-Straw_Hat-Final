@@ -5,7 +5,7 @@ import { validate } from '../core/validate';
 import { stepToward } from '../core/executor';
 import { solveIK, cartesianStep } from '../core/ik';
 import { CHAIN, NJ, HOME } from '../core/chain';
-import { clamp, add, norm, scale } from '../core/math';
+import { clamp, add, sub, norm, scale } from '../core/math';
 
 export interface DispatchResult {
   ok: boolean;
@@ -14,8 +14,10 @@ export interface DispatchResult {
 
 const JOG_RATE = 0.9;       // rad/s — continuous joint jog
 const MOVE_VMAX = 1.2;      // rad/s — eased discrete moves
-const CART_RATE = 0.12;     // m/s — continuous Cartesian jog
+const CART_RATE = 0.12;     // m/s — continuous Cartesian jog at full deflection
 const DQ_CAP_FRAME = 0.05;  // rad — per-frame cap for resolved-rate jog
+const CART_TAU = 0.025;     // s — velocity-smoothing time constant (ramps start, stops < 100 ms)
+const CART_STOP_EPS = 0.02; // below 2 % of full speed the tip is considered at rest
 
 /**
  * The single motion pipeline. Three lanes, all writing store.q (the one source
@@ -27,7 +29,8 @@ const DQ_CAP_FRAME = 0.05;  // rad — per-frame cap for resolved-rate jog
  */
 class MotionController {
   private held = new Map<number, number>();      // joint index → sign (+1 / −1)
-  private cartHeld = new Map<string, Vec3>();    // jog id → base-frame direction
+  private cartHeld = new Map<string, Vec3>();    // jog id → base-frame direction (magnitude 0..1)
+  private cartVel: Vec3 = [0, 0, 0];             // smoothed tip-velocity direction (eased toward held)
   private target: number[] | null = null;
 
   /** Continuous joint jog (keyboard/joystick hold). */
@@ -54,10 +57,12 @@ class MotionController {
     this.cartHeld.delete(id);
   }
 
-  /** Release every held jog (focus loss / e-stop of the manual lanes). */
+  /** Release every held jog (focus loss / e-stop of the manual lanes).
+   *  Zeroing cartVel makes 'stop' a hard e-stop; plain jog-release decays smoothly. */
   releaseAll() {
     this.held.clear();
     this.cartHeld.clear();
+    this.cartVel = [0, 0, 0];
   }
 
   /** Run a discrete, validated command through the shared gate. */
@@ -116,12 +121,20 @@ class MotionController {
   tick(dt: number) {
     const st = useArmStore.getState();
 
-    if (this.cartHeld.size > 0) {
-      let dir: Vec3 = [0, 0, 0];
-      for (const v of this.cartHeld.values()) dir = add(dir, v);
-      const n = norm(dir);
-      if (n > 0) {
-        const dxyz = scale(dir, (CART_RATE * dt) / n);
+    // Cartesian lane — commanded direction is the sum of held jogs (proportional:
+    // a partly-deflected joystick summing to < 1 jogs slower). The applied velocity
+    // eases toward it (CART_TAU) so starts and stops are smooth rather than stepped,
+    // and the lane keeps ticking after release until the residual velocity decays out.
+    let cmd: Vec3 = [0, 0, 0];
+    for (const v of this.cartHeld.values()) cmd = add(cmd, v);
+    const cmdN = norm(cmd);
+    if (cmdN > 1) cmd = scale(cmd, 1 / cmdN); // full deflection caps the speed; below that scales down
+    const a = Math.min(1, dt / CART_TAU);
+    this.cartVel = add(this.cartVel, scale(sub(cmd, this.cartVel), a));
+    const speed = norm(this.cartVel);
+    if (this.cartHeld.size > 0 || speed > CART_STOP_EPS) {
+      if (speed > 1e-4) {
+        const dxyz = scale(this.cartVel, CART_RATE * dt);
         const dq = cartesianStep(st.q, dxyz);
         let maxAbs = 0;
         for (const v of dq) maxAbs = Math.max(maxAbs, Math.abs(v));
@@ -130,8 +143,10 @@ class MotionController {
         for (let i = 0; i < NJ; i++)
           q[i] = clamp(q[i] + dq[i] * sc, CHAIN[i].lower, CHAIN[i].upper);
         st.setQ(q);
+      } else {
+        this.cartVel = [0, 0, 0];
       }
-      this.target = null;
+      if (this.cartHeld.size > 0) this.target = null;
       return;
     }
 

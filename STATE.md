@@ -4,7 +4,7 @@
 
 ## Where we are
 
-- **Current step:** **Step 5 (autonomous PIN, 20%) DONE + browser-verified** (PinRunner state machine, ±5mm mm-badges, tip trail, Esc-abort; PIN 156 → 3/3 @ ~1mm; 24/24 tests). Next is **Step 6: joystick + jog polish (10%)**, then Step 7 voice (15%). PIN + IK + Viz all secured.
+- **Current step:** **Step 6 (joystick + jog polish, 10% manual) DONE + browser-verified** (GUI XY pad + Z-hold buttons on the shared Cartesian jog lane; proportional speed, velocity-smoothed sub-100ms stop, workspace-limit badge, jog blocked during PIN except Stop; pad +X→50mm, off-singularity Z-down→−45mm, PIN disables pad; 24/24 tests). Next is **Step 7: deterministic voice + TTS (15%)**, then Step 8 Wokwi / Step 9 agent bonus. Manual (10%) + PIN (20%) + IK (15%) + Viz (15%) all secured = 60%.
 - Dev server: `npm run dev` → http://localhost:5173 (running).
 - **Verification harness (reusable):** headless Chrome + CDP driver at `scratchpad/cdp.mjs`. `node cdp.mjs <url> <out.png> [snippetFile] [settleMs]` — navigates, runs an async JS snippet (DOM clicks / dispatched KeyboardEvents), screenshots, reports page exceptions. WebGL works via SwiftShader. Use after each step to self-verify before handing Arif his check.
 - **It is final-day.** Freeze 17:30, submit by 18:15 (hard 18:30), demo after 18:30.

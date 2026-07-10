@@ -4,6 +4,7 @@ import TcpReadout from './components/TcpReadout';
 import PinPad from './components/PinPad';
 import JointPanel from './components/JointPanel';
 import GotoPanel from './components/GotoPanel';
+import Joystick from './components/Joystick';
 import ManualPanel from './components/ManualPanel';
 import EventLog from './components/EventLog';
 
@@ -20,6 +21,7 @@ export default function App() {
           <PinPad />
           <GotoPanel />
           <JointPanel />
+          <Joystick />
           <ManualPanel />
           <EventLog />
         </aside>
