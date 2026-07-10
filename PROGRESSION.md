@@ -41,3 +41,5 @@
 | ~12:12 | Step 5 (autonomous PIN, 20%) done + browser-verified (PIN 156 → 3/3 keys ~1mm, green badges, tip trail). 24/24 tests. Committed locally, awaiting push approval. | — |
 | ~12:18 | Fast-forward push → `d569cb6`: `28af780` (Step 5 PIN) + `d569cb6` (PIN pad UX fix — spaced-default bug). In sync, no clobber. | Arif (push request) |
 | ~12:22 | Fast-forward push → `4760255`: push-log doc + `4760255` (dropped rubric-weight label from PIN heading). In sync. | Arif (push request) |
+| ~13:15 | Fast-forward push → `487d661`: `1e84e5b` (push-log doc) + `487d661` (inline IK accept/reject status in Go-to-point). In sync, clean history. | Arif (push request) |
+| ~13:42 | Push → `b0366b7`: Step 6 commits `3f8f010` (joystick + jog polish) + `b0366b7` (joystick stall/limit badge + jog-release safety net). **Co-author `Anamika-Mallick` added to both** (Arif's call, her lane on manual control) via filter-branch; author/committer = arif, tree identical, no AI tags. Backup ref cleared. | Arif (push request, co-author `Anamika-Mallick`) |
