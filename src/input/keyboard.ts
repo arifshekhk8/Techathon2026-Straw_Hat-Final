@@ -1,5 +1,6 @@
 import type { Vec3 } from '../core/math';
 import { motion } from '../state/controller';
+import { pinRunner } from '../state/pinRunner';
 
 // Letter keys jog individual joints (hold to jog). key → [joint index, sign]
 const JOG_KEYS: Record<string, [number, number]> = {
@@ -34,6 +35,7 @@ export function installKeyboard(): () => void {
     if (isTyping(e.target)) return;
     const k = e.key.toLowerCase();
     if (k === 'escape') {
+      pinRunner.abort(); // no-op if no PIN running
       motion.dispatch({ type: 'stop', source: 'keyboard' });
       return;
     }

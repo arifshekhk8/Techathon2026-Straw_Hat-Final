@@ -17,6 +17,22 @@ export interface JointMeta {
   upper: number;
 }
 
+export interface PinResult {
+  key: number;
+  mm: number;
+  ok: boolean;
+}
+
+export interface PinProgress {
+  running: boolean;
+  pin: number[];
+  index: number;
+  phase: string;
+  results: PinResult[];
+}
+
+const IDLE_PIN: PinProgress = { running: false, pin: [], index: 0, phase: 'idle', results: [] };
+
 interface ArmStore {
   jointMeta: JointMeta[];
   /** Joint angles, radians, joints 1..7 — the single source of truth the renderer follows. */
@@ -24,10 +40,12 @@ interface ArmStore {
   /** Stylus tip position in the arm base frame, meters. */
   tcp: [number, number, number];
   events: ArmEvent[];
+  pinProgress: PinProgress;
   setJointMeta: (meta: JointMeta[]) => void;
   setJoint: (index: number, value: number) => void;
   setQ: (q: number[]) => void;
   setTcp: (tcp: [number, number, number]) => void;
+  setPinProgress: (p: PinProgress) => void;
   log: (source: string, msg: string, level?: EventLevel) => void;
 }
 
@@ -38,6 +56,7 @@ export const useArmStore = create<ArmStore>((set) => ({
   q: [0, 0, 0, 0, 0, 0, 0],
   tcp: [0, 0, 0],
   events: [],
+  pinProgress: IDLE_PIN,
   setJointMeta: (jointMeta) => set({ jointMeta }),
   setJoint: (index, value) =>
     set((s) => {
@@ -47,6 +66,7 @@ export const useArmStore = create<ArmStore>((set) => ({
     }),
   setQ: (q) => set({ q: q.slice() }),
   setTcp: (tcp) => set({ tcp }),
+  setPinProgress: (pinProgress) => set({ pinProgress }),
   log: (source, msg, level = 'info') =>
     set((s) => ({
       events: [

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import keyConfig from '../assets/key.config.json';
 
-export type KeyState = 'idle' | 'target' | 'touched';
+export type KeyState = 'idle' | 'target' | 'touched' | 'fail';
 
 const KEY_SIZE = 0.042;
 const KEY_HEIGHT = 0.012;
@@ -10,6 +10,7 @@ const STATE_COLORS: Record<KeyState, number> = {
   idle: 0x46536b,
   target: 0xf2a01d,
   touched: 0x35c26b,
+  fail: 0xef4444,
 };
 
 export const KEY_POSITIONS: Record<number, [number, number, number]> = Object.fromEntries(
