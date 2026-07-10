@@ -22,7 +22,7 @@
 <rect x="727.5999999999999" y="112" width="203.2" height="74" rx="12" ry="12" fill="#fff" stroke="#7c3aed" stroke-width="1.8" filter="url(#sh)"/>
 <rect x="727.5999999999999" y="112" width="203.2" height="74" rx="12" ry="12" fill="#7c3aed" fill-opacity="0.09"/>
 <text x="829.1999999999999" y="144" font-family="'Inter','Segoe UI',system-ui,-apple-system,'Helvetica Neue',sans-serif" font-size="15.5" font-weight="650" fill="#7c3aed" text-anchor="middle">Voice · LLM Agent</text>
-<text x="829.1999999999999" y="165" font-family="'Inter','Segoe UI',system-ui,-apple-system,'Helvetica Neue',sans-serif" font-size="12" font-weight="400" fill="#64748b" text-anchor="middle">mic · Groq plan</text>
+<text x="829.1999999999999" y="165" font-family="'Inter','Segoe UI',system-ui,-apple-system,'Helvetica Neue',sans-serif" font-size="12" font-weight="400" fill="#64748b" text-anchor="middle">Phase 3 · Phase 3B</text>
 <rect x="956.8" y="112" width="203.2" height="74" rx="12" ry="12" fill="#fff" stroke="#d97706" stroke-width="1.8" filter="url(#sh)"/>
 <rect x="956.8" y="112" width="203.2" height="74" rx="12" ry="12" fill="#d97706" fill-opacity="0.09"/>
 <text x="1058.3999999999999" y="144" font-family="'Inter','Segoe UI',system-ui,-apple-system,'Helvetica Neue',sans-serif" font-size="15.5" font-weight="650" fill="#d97706" text-anchor="middle">PIN Runner</text>
@@ -46,7 +46,7 @@
 <rect x="521" y="420" width="158" height="30" rx="15" ry="15" fill="#fff" stroke="#fca5a5" stroke-width="1.4"/>
 <text x="600" y="440" font-family="'Inter','Segoe UI',system-ui,-apple-system,'Helvetica Neue',sans-serif" font-size="12.5" font-weight="500" fill="#b91c1c" text-anchor="middle">reach envelope</text>
 <rect x="695" y="420" width="158" height="30" rx="15" ry="15" fill="#fff" stroke="#fca5a5" stroke-width="1.4"/>
-<text x="774" y="440" font-family="'Inter','Segoe UI',system-ui,-apple-system,'Helvetica Neue',sans-serif" font-size="12.5" font-weight="500" fill="#b91c1c" text-anchor="middle">floor plane</text>
+<text x="774" y="440" font-family="'Inter','Segoe UI',system-ui,-apple-system,'Helvetica Neue',sans-serif" font-size="12.5" font-weight="500" fill="#b91c1c" text-anchor="middle">solid surface</text>
 <rect x="40" y="372" width="250" height="84" rx="12" ry="12" fill="#fff" stroke="#fecaca" stroke-width="1.6" filter="url(#sh)"/>
 <text x="165" y="406" font-family="'Inter','Segoe UI',system-ui,-apple-system,'Helvetica Neue',sans-serif" font-size="15" font-weight="650" fill="#dc2626" text-anchor="middle">rejected  ✕</text>
 <text x="165" y="428" font-family="'Inter','Segoe UI',system-ui,-apple-system,'Helvetica Neue',sans-serif" font-size="12.5" font-weight="400" fill="#64748b" text-anchor="middle">logged + spoken · no motion</text>

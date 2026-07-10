@@ -14,8 +14,9 @@ A 7-DOF stylus arm, simulated and driven entirely in the browser — **no backen
 - **Real inverse kinematics** — a Damped Least-Squares (DLS) resolved-rate solver, Jacobian finite-difference-verified against pure-TS forward kinematics.
 - **Autonomous PIN entry** — give it a 6-digit PIN and the arm plans, descends onto, and taps each key on the 3D keypad, reporting per-key accuracy in millimetres.
 - **Natural-language voice** — an offline deterministic grammar handles simple commands with zero API key; an optional Groq LLM agent plans multi-step utterances. Both are limit-checked identically.
-- **Safety first** — every command is bounds-checked (joint limits, reach envelope, floor plane) *before* execution; rejections are logged and spoken, never silently executed.
-- **Fully client-side & verifiable** — pure-TypeScript kinematics core with **50 passing unit tests**; the FK anchor `(0, 0, 1.497 m)` is proven independently of three.js.
+- **Safety first** — every command is bounds-checked (joint limits, reach envelope, solid surface) *before* execution; rejections are logged and spoken, never silently executed.
+- **The surface is solid** — no part of the arm may pass below the table, not just the tip. A jog held into the floor **slides to contact and stops flush**, and a joint move that is legal for the joint but would bury a link is refused outright.
+- **Fully client-side & verifiable** — pure-TypeScript kinematics core with **62 passing unit tests**; the FK anchor `(0, 0, 1.497 m)` is proven independently of three.js.
 
 ---
 
@@ -42,7 +43,7 @@ A 7-DOF stylus arm, simulated and driven entirely in the browser — **no backen
                           │   validate(cmd, q)   │   ◄── THE SINGLE GATE
                           │  joint limits ·      │       no source bypasses it
                           │  reach envelope ·    │
-                          │  floor plane         │
+                          │  solid surface       │
                           └──────────┬───────────┘
                             ok │           │ rejected
                                ▼           ▼
@@ -97,6 +98,15 @@ The arm is a 7-joint serial chain (`base yaw → shoulder → elbow → forearm 
 
 ---
 
+## The surface is solid
+
+The table isn't a backdrop the arm may sink through. `src/core/floor.ts` owns one rule and every lane enforces it:
+
+- **Whole-arm, not just the tip.** The movable arm is modelled as the polyline *joint-1 origin → … → stylus tip*. Its links are straight segments and the surface is the plane `z = 5 mm`, so the minimum height over the polyline's **vertices is exactly** the minimum over the whole arm — no sampling along links needed. (The pedestal below joint 1 is fixed structure standing *on* the surface, so it's excluded.)
+- **Refused at the gate.** A `rotateJoint` can sit happily inside its joint limit and still bury a link. Driving the shoulder to its −120° limit is rejected with *"stylus tip would reach −284 mm — the surface is solid (min 5 mm)"* — before any motion.
+- **Slide to contact.** A jog held into the floor doesn't freeze early or tunnel through: `clampToFloor()` bisects the per-frame step so the arm comes to rest **flush** on the plane. Browser-verified: a 4.5 s joint jog and a 5 s Cartesian tip jog both stop at exactly **5.00 mm**, and the joint jog stops at −1.83 rad — short of its −2.09 limit, because the *surface* stopped it, not the joint.
+- **IK solutions are checked too.** A target point above the floor can still have an IK pose that dips a link below it, so the solved pose is re-checked before it becomes the motion target.
+
 ## Autonomous PIN entry
 
 Give it a 6-digit PIN; a state machine (`transit → settle → pure −Z descend → dwell → retract`) taps each key:
@@ -109,11 +119,13 @@ Browser-verified: **PIN 156 → 3/3 keys within ~1 mm.** Esc aborts mid-sequence
 
 ---
 
-## Voice control
+## Voice control — two independent panels
 
-Two layers, one mic, one text box — both funnel through the same `validate()` gate.
+The rulebook is explicit: *"the optional agentic extension (Phase 3B) does not replace the required deterministic voice control (Phase 3) — baselines must still work independently and will be judged as such."* So they are **two separate panels**, each with its own mic and text box. Phase 3 never calls the LLM; Phase 3B is purely additive. Both funnel through the same `validate()` gate.
 
-**1. Deterministic grammar** (`src/voice/grammar.ts`) — offline, **no API key**, instant. Base frame is Z-up: *forward = +X (toward the keypad) · left = +Y · up = +Z*.
+### Phase 3 — deterministic voice control (required)
+
+`src/voice/VoicePanel.tsx` + `src/voice/grammar.ts` — offline, **no API key, zero network calls**, instant. Base frame is Z-up: *forward = +X (toward the keypad) · left = +Y · up = +Z*.
 
 | Say | Does |
 |---|---|
@@ -124,11 +136,17 @@ Two layers, one mic, one text box — both funnel through the same `validate()` 
 | "touch key 5" | Tap a keypad key |
 | "enter pin 156" | Autonomous PIN entry |
 
-**2. LLM agent** (`src/agent/`, optional) — for multi-step / free-form phrasing ("tap key 5 twice then lift 2 cm"). Groq `openai/gpt-oss-120b` (llama-3.3-70b fallback), JSON mode, temperature 0, **zod-validated plan**. It emits the same `MotionCommand`s and each one is re-validated before it runs — the agent cannot bypass a limit. Out-of-range requests are refused *before any joint moves*.
+An utterance the grammar can't parse is reported as such — it is **never** silently escalated to the LLM.
+
+### Phase 3B — agentic voice control (optional extension)
+
+`src/voice/AgentPanel.tsx` + `src/agent/` — for multi-step / free-form phrasing ("tap key 5 twice then lift 2 cm"). Groq `openai/gpt-oss-120b` (llama-3.3-70b fallback), JSON mode, temperature 0, **zod-validated plan**.
+
+The whole plan is dry-run through `precheck()` — the identical `validate()` gate — *before anything moves*. A rejected plan gets **one** revision round with the validator's reasons fed back; if it still fails, the agent **executes nothing** and speaks a refusal. Ambiguous instructions get a clarifying question instead of a guess. Per-command status badges show `✓` / `✗ reason` live.
 
 TTS speaks every confirmation and rejection aloud (Web Speech API).
 
-> The API key is entered in-browser (or via `.env.local`) and stored only in `localStorage`. It is **never committed**. The whole app runs without it — the key only enables the multi-step agentic layer.
+> The API key is entered in-browser (or via `.env.local`) and stored only in `localStorage`. It is **never committed**. Phase 3 runs entirely without it — the key only enables the Phase 3B panel.
 
 ---
 
@@ -152,7 +170,7 @@ The circuit covers the rubric's four elements — **power delivery** (shared 5 V
 npm install
 npm run dev        # http://localhost:5173
 npm run build      # tsc -b && vite build
-npx vitest run     # 50 unit tests
+npx vitest run     # 62 unit tests
 ```
 
 Optional (enables the agentic voice layer only):
