@@ -3,6 +3,7 @@ import { motion } from '../state/controller';
 import type { DispatchResult } from '../state/controller';
 import { precomputeKeyPoses } from '../core/ik';
 import type { Digit } from '../core/commands';
+import Panel from './ui/Panel';
 
 /** IK dashboard: type a base-frame target (mm), solve + move there; plus a
  *  live per-key reachability strip driven by the precomputed IK poses. */
@@ -25,11 +26,13 @@ export default function GotoPanel() {
   };
 
   const field = (label: string, val: string, set: (s: string) => void) => (
-    <label className="flex flex-col gap-0.5">
-      <span className="text-[10px] uppercase text-slate-500">{label} mm</span>
+    <label className="flex flex-col gap-1">
+      <span className="font-display text-[10px] uppercase tracking-[0.14em] text-dim">
+        {label} mm
+      </span>
       <input
         type="number"
-        className="w-full rounded bg-slate-950 px-1.5 py-1 font-mono text-xs text-slate-100 outline-none focus:ring-1 focus:ring-sky-500"
+        className="well w-full rounded px-1.5 py-1.5 font-mono text-xs text-ink outline-none"
         value={val}
         onChange={(e) => set(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && go()}
@@ -38,32 +41,32 @@ export default function GotoPanel() {
   );
 
   return (
-    <section className="rounded-lg border border-slate-800 bg-slate-900 p-3">
-      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-        IK · go to point
-      </h2>
+    <Panel title="IK · go to point" delay={160}>
       <div className="grid grid-cols-3 gap-2">
         {field('X', x, setX)}
         {field('Y', y, setY)}
         {field('Z', z, setZ)}
       </div>
-      <div className="mt-2 flex items-center justify-between">
-        <label className="flex items-center gap-1.5 text-xs text-slate-400">
-          <input type="checkbox" className="accent-sky-400" checked={tipDown} onChange={(e) => setTipDown(e.target.checked)} />
+
+      <div className="mt-2.5 flex items-center justify-between">
+        <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-muted">
+          <input
+            type="checkbox"
+            className="accent-[var(--color-flare)]"
+            checked={tipDown}
+            onChange={(e) => setTipDown(e.target.checked)}
+          />
           Stylus down
         </label>
-        <button
-          className="rounded bg-sky-600 px-3 py-1 text-xs font-medium text-white hover:bg-sky-500"
-          onClick={go}
-        >
+        <button className="btn btn-flare px-4 py-1 text-xs" onClick={go}>
           Go
         </button>
       </div>
 
       {status && (
         <div
-          className={`mt-2 rounded px-2 py-1 font-mono text-[11px] ${
-            status.ok ? 'bg-emerald-600/20 text-emerald-300' : 'bg-rose-700/25 text-rose-200'
+          className={`mt-2.5 rounded border px-2 py-1.5 font-mono text-[10px] leading-relaxed ${
+            status.ok ? 'border-ok/40 text-ok' : 'border-alarm/50 text-alarm'
           }`}
         >
           {status.ok ? '✓ ' : '✗ rejected — '}
@@ -71,22 +74,24 @@ export default function GotoPanel() {
         </div>
       )}
 
-      <div className="mt-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+      <div className="mt-3 mb-1.5 font-display text-[10px] uppercase tracking-[0.14em] text-dim">
         Key reachability (IK)
       </div>
-      <div className="flex gap-1.5">
+      <div className="flex gap-1">
         {([1, 2, 3, 4, 5, 6] as Digit[]).map((d) => (
           <div
             key={d}
-            title={`key ${d}: ${reach[d].reachable ? `reach ${(reach[d].touchErr * 1000).toFixed(2)} mm` : 'unreachable'}`}
-            className={`flex h-6 flex-1 items-center justify-center rounded font-mono text-xs ${
-              reach[d].reachable ? 'bg-emerald-600/30 text-emerald-300' : 'bg-rose-700/40 text-rose-200'
+            title={`key ${d}: ${
+              reach[d].reachable ? `reach ${(reach[d].touchErr * 1000).toFixed(2)} mm` : 'unreachable'
+            }`}
+            className={`well flex h-6 flex-1 items-center justify-center rounded border font-mono text-[11px] ${
+              reach[d].reachable ? 'border-ok/40 text-ok' : 'border-alarm/50 text-alarm'
             }`}
           >
             {d}
           </div>
         ))}
       </div>
-    </section>
+    </Panel>
   );
 }

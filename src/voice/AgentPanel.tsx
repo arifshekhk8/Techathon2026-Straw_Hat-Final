@@ -15,15 +15,16 @@ import { speak, cancelSpeech } from './tts';
 import { useSpeechRecognition } from './useSpeechRecognition';
 import { runAgent, type CommandStatus } from '../agent/agentLoop';
 import { hasApiKey, setApiKey, clearApiKey, PRIMARY_MODEL } from '../agent/groqClient';
+import Panel from '../components/ui/Panel';
 
 type FbKind = 'ok' | 'reject' | 'error' | 'clarify' | 'agent';
 type Feedback = { kind: FbKind; text: string } | null;
 
 const BADGE: Record<CommandStatus['state'], string> = {
-  pending: 'border-slate-700 text-slate-500',
-  running: 'border-sky-500 text-sky-300 animate-pulse',
-  ok: 'border-emerald-600 text-emerald-300',
-  rejected: 'border-rose-600 text-rose-300',
+  pending: 'border-hairline text-dim',
+  running: 'border-flare text-flare breathe',
+  ok: 'border-ok/50 text-ok',
+  rejected: 'border-alarm/60 text-alarm',
 };
 
 export default function AgentPanel() {
@@ -97,25 +98,22 @@ export default function AgentPanel() {
 
   const fbColor =
     feedback?.kind === 'ok'
-      ? 'text-emerald-300'
-      : feedback?.kind === 'reject'
-        ? 'text-amber-300'
+      ? 'text-ok'
+      : feedback?.kind === 'reject' || feedback?.kind === 'error'
+        ? 'text-alarm'
         : feedback?.kind === 'clarify'
-          ? 'text-sky-300'
-          : feedback?.kind === 'agent'
-            ? 'text-indigo-300'
-            : 'text-rose-300';
+          ? 'text-signal'
+          : 'text-flare';
 
   return (
-    <section className="rounded-lg border border-indigo-900/60 bg-slate-900 p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Agentic voice control
-        </h2>
-        <div className="flex items-center gap-1">
+    <Panel
+      title="Agentic voice control"
+      delay={120}
+      meta={
+        <div className="flex items-center gap-1.5">
           <span
             title="Optional extension — an LLM reasoning layer behind the same safety gate"
-            className="rounded border border-indigo-700 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-indigo-400"
+            className="chip border-flare-deep uppercase text-flare"
           >
             Phase 3B
           </span>
@@ -123,50 +121,42 @@ export default function AgentPanel() {
             type="button"
             onClick={() => setShowKey((v) => !v)}
             title="Groq API key — required for this panel only"
-            className="rounded px-1.5 py-0.5 text-[11px] text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+            className="btn px-1.5 py-0.5 text-[10px]"
           >
             ⚙ {keyed ? 'AI on' : 'AI off'}
           </button>
         </div>
-      </div>
-
+      }
+    >
       {showKey && (
-        <div className="mb-2 rounded-md border border-slate-800 bg-slate-950 p-2">
-          <p className="mb-1 text-[11px] text-slate-500">
+        <div className="well mb-2 rounded p-2">
+          <p className="mb-1.5 text-[10px] leading-relaxed text-dim">
             Groq API key — powers this panel only. Stored in this browser. Phase 3 voice control
             keeps working without it.
           </p>
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             <input
               type="password"
               value={keyInput}
               onChange={(e) => setKeyInput(e.target.value)}
               placeholder="gsk_…"
-              className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-slate-500 focus:outline-none"
+              className="well min-w-0 flex-1 rounded px-2 py-1.5 text-xs text-ink outline-none placeholder:text-dim"
             />
-            <button
-              type="button"
-              onClick={saveKey}
-              className="rounded-md bg-slate-700 px-3 py-1.5 text-sm text-slate-100 hover:bg-slate-600"
-            >
+            <button type="button" onClick={saveKey} className="btn px-3 py-1.5 text-xs">
               Save
             </button>
             {keyed && (
-              <button
-                type="button"
-                onClick={forgetKey}
-                className="rounded-md bg-rose-700/70 px-2 py-1.5 text-sm text-white hover:bg-rose-600"
-              >
+              <button type="button" onClick={forgetKey} className="btn btn-alarm px-2 py-1.5 text-xs">
                 Forget
               </button>
             )}
           </div>
-          <p className="mt-1 text-[10px] text-slate-600">Model: {PRIMARY_MODEL}</p>
+          <p className="num mt-1.5 text-[9px] text-dim">Model: {PRIMARY_MODEL}</p>
         </div>
       )}
 
       {!keyed && (
-        <p className="mb-2 rounded-md border border-slate-800 bg-slate-950 px-2 py-1.5 text-[11px] text-slate-500">
+        <p className="well mb-2 rounded px-2 py-1.5 text-[10px] leading-relaxed text-dim">
           Add a Groq key (⚙) to enable free-form, multi-step commands.
         </p>
       )}
@@ -179,62 +169,59 @@ export default function AgentPanel() {
           onPointerLeave={pttUp}
           onContextMenu={(e) => e.preventDefault()}
           disabled={busy || !keyed}
-          className={`mb-2 w-full select-none rounded-md px-3 py-2 text-sm font-medium transition disabled:opacity-40 ${
-            rec.listening ? 'bg-rose-600 text-white' : 'bg-indigo-800 text-slate-100 hover:bg-indigo-700'
+          className={`btn mb-2 flex w-full select-none items-center justify-center gap-2 py-2 text-xs ${
+            rec.listening ? 'btn-flare breathe' : ''
           }`}
         >
-          {rec.listening ? '● Listening — release to send' : '🎤 Hold to talk'}
+          <span
+            className={`inline-block h-1.5 w-1.5 rounded-full ${rec.listening ? 'bg-flare' : 'bg-dim'}`}
+          />
+          {rec.listening ? 'Listening — release to send' : 'Hold to talk'}
         </button>
       ) : (
-        <p className="mb-2 text-[11px] text-slate-500">
+        <p className="mb-2 text-[10px] text-dim">
           Speech recognition unavailable in this browser — use the box below.
         </p>
       )}
 
-      <form onSubmit={submitTyped} className="mb-2 flex gap-2">
+      <form onSubmit={submitTyped} className="mb-2 flex gap-1.5">
         <input
           value={typed}
           onChange={(e) => setTyped(e.target.value)}
           disabled={busy || !keyed}
           placeholder='e.g. "tap key 5 twice then lift 2 cm"'
-          className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-slate-500 focus:outline-none disabled:opacity-40"
+          className="well min-w-0 flex-1 rounded px-2 py-1.5 text-xs text-ink outline-none placeholder:text-dim disabled:opacity-40"
         />
-        <button
-          type="submit"
-          disabled={busy || !keyed}
-          className="rounded-md bg-indigo-800 px-3 py-1.5 text-sm text-slate-100 hover:bg-indigo-700 disabled:opacity-40"
-        >
+        <button type="submit" disabled={busy || !keyed} className="btn btn-flare px-3 py-1.5 text-xs">
           {busy ? '…' : 'Send'}
         </button>
       </form>
 
-      {rec.interim && <p className="mb-1 text-xs italic text-slate-400">{rec.interim}…</p>}
-      {rec.error && <p className="mb-1 text-xs text-rose-400">{rec.error}</p>}
+      {rec.interim && <p className="mb-1 text-[11px] italic text-muted">{rec.interim}…</p>}
+      {rec.error && <p className="mb-1 text-[11px] text-alarm">{rec.error}</p>}
 
       {heard && (
-        <p className="mb-1 text-xs text-slate-500">
-          heard: <span className="text-slate-300">"{heard}"</span>
+        <p className="mb-1 text-[11px] text-dim">
+          heard: <span className="text-muted">"{heard}"</span>
         </p>
       )}
 
       {feedback && (
-        <p className={`text-xs ${fbColor}`}>
-          <span className="mr-1 rounded bg-slate-800 px-1 py-0.5 text-[10px] uppercase tracking-wide text-slate-400">
-            AI
-          </span>
+        <p className={`text-[11px] leading-relaxed ${fbColor}`}>
+          <span className="chip mr-1.5 uppercase">AI</span>
           {feedback.text}
         </p>
       )}
 
       {statuses.length > 0 && (
-        <ul className="mt-1 flex flex-col gap-1">
+        <ul className="mt-2 flex flex-col gap-1">
           {statuses.map((s, i) => (
             <li
               key={i}
-              className={`flex items-center justify-between rounded border px-2 py-1 text-[11px] ${BADGE[s.state]}`}
+              className={`well flex items-center justify-between rounded border px-2 py-1 text-[10px] ${BADGE[s.state]}`}
             >
-              <span>{s.label}</span>
-              <span className="ml-2 shrink-0 font-mono">
+              <span className="truncate">{s.label}</span>
+              <span className="num ml-2 shrink-0">
                 {s.state === 'ok'
                   ? '✓'
                   : s.state === 'rejected'
@@ -247,6 +234,6 @@ export default function AgentPanel() {
           ))}
         </ul>
       )}
-    </section>
+    </Panel>
   );
 }

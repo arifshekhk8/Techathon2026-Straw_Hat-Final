@@ -1,9 +1,10 @@
 import { useArmStore } from '../state/store';
 import { motion } from '../state/controller';
+import Panel from './ui/Panel';
 
 const rad2deg = (r: number) => (r * 180) / Math.PI;
 
-/** Live joint dashboard: 7 rows of angle readout + limit bar + slider.
+/** Live joint dashboard: 7 rows of angle readout + travel bar + slider.
  *  The sliders are the "dashboard" motion trigger. They go through the shared
  *  motion controller like every other source — never straight into the store —
  *  so joint limits and the solid surface bound them too. */
@@ -13,17 +14,20 @@ export default function JointPanel() {
   const log = useArmStore((s) => s.log);
 
   if (jointMeta.length === 0) {
-    return <div className="text-sm text-slate-400">Loading URDF…</div>;
+    return (
+      <Panel title="Joint states" delay={40}>
+        <div className="num text-[11px] text-dim">Loading URDF…</div>
+      </Panel>
+    );
   }
 
   return (
-    <section className="rounded-lg border border-slate-800 bg-slate-900 p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Joint states
-        </h2>
+    <Panel
+      title="Joint states"
+      delay={40}
+      meta={
         <button
-          className="rounded bg-slate-700 px-2 py-0.5 text-xs text-slate-200 hover:bg-slate-600"
+          className="btn px-2 py-0.5 text-[10px]"
           onClick={() => {
             motion.dispatch({ type: 'home', source: 'dashboard' });
             log('dashboard', 'All joints → 0 (FK anchor pose: TCP must read 0, 0, 1497 mm)');
@@ -31,38 +35,56 @@ export default function JointPanel() {
         >
           Zero all
         </button>
-      </div>
-      <div className="space-y-2">
-        {jointMeta.map((j, i) => {
-          const frac = (q[i] - j.lower) / (j.upper - j.lower);
-          return (
-            <div key={j.name}>
-              <div className="flex items-baseline justify-between text-xs">
-                <span className="text-slate-300">{j.label}</span>
-                <span className="font-mono tabular-nums text-sky-300">
-                  {rad2deg(q[i]).toFixed(1)}°
-                </span>
-              </div>
-              <div className="relative mt-1 h-1 rounded bg-slate-800">
+      }
+      bodyClassName="space-y-2.5"
+    >
+      {jointMeta.map((j, i) => {
+        const frac = (q[i] - j.lower) / (j.upper - j.lower);
+        const zeroFrac = (0 - j.lower) / (j.upper - j.lower);
+        const near = frac < 0.03 || frac > 0.97; // riding a joint limit
+        return (
+          <div key={j.name}>
+            <div className="flex items-baseline justify-between">
+              <span className="font-display text-[11px] font-medium tracking-wide text-muted">
+                {j.label}
+              </span>
+              <span className={`num text-[11px] ${near ? 'text-flare' : 'text-ink'}`}>
+                {rad2deg(q[i]).toFixed(1)}°
+              </span>
+            </div>
+
+            {/* One instrument: the slider thumb rides the travel bar it reads from,
+                which is filled from the zero tick toward the current angle. */}
+            <div className="relative mt-1.5 h-3.5">
+              <div className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-hairline">
                 <div
-                  className="absolute inset-y-0 left-0 rounded bg-sky-500/70"
-                  style={{ width: `${Math.min(100, Math.max(0, frac * 100))}%` }}
+                  className={`absolute inset-y-0 rounded-full ${near ? 'bg-flare' : 'bg-signal'}`}
+                  style={{
+                    left: `${Math.min(zeroFrac, frac) * 100}%`,
+                    width: `${Math.abs(frac - zeroFrac) * 100}%`,
+                  }}
                 />
               </div>
+              <div
+                className="absolute top-1/2 h-[9px] w-px -translate-y-1/2 bg-dim"
+                style={{ left: `${zeroFrac * 100}%` }}
+                title="0°"
+              />
               <input
                 type="range"
                 aria-label={j.label}
-                className="mt-0.5 w-full accent-sky-400"
+                className="bare absolute inset-0 w-full"
                 min={j.lower}
                 max={j.upper}
                 step={0.002}
                 value={q[i]}
+                title={`${rad2deg(j.lower).toFixed(0)}° … ${rad2deg(j.upper).toFixed(0)}°`}
                 onChange={(e) => motion.setJoint(i, Number(e.target.value), 'dashboard')}
               />
             </div>
-          );
-        })}
-      </div>
-    </section>
+          </div>
+        );
+      })}
+    </Panel>
   );
 }

@@ -13,6 +13,7 @@ import { parse, isError, JOINT_LABELS } from './grammar';
 import { dispatch, type MotionCommand } from './pipeline';
 import { speak, cancelSpeech } from './tts';
 import { useSpeechRecognition } from './useSpeechRecognition';
+import Panel from '../components/ui/Panel';
 
 /** Short spoken/visible confirmation for a command the deterministic grammar ran. */
 function confirm(cmd: MotionCommand): string {
@@ -98,26 +99,21 @@ export default function VoicePanel() {
   };
 
   const fbColor =
-    feedback?.kind === 'ok'
-      ? 'text-emerald-300'
-      : feedback?.kind === 'reject'
-        ? 'text-amber-300'
-        : 'text-rose-300';
+    feedback?.kind === 'ok' ? 'text-ok' : feedback?.kind === 'reject' ? 'text-alarm' : 'text-alarm';
 
   return (
-    <section className="rounded-lg border border-slate-800 bg-slate-900 p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Voice control
-        </h2>
+    <Panel
+      title="Voice control"
+      delay={80}
+      meta={
         <span
           title="Deterministic keyword grammar — runs offline, no API key"
-          className="rounded border border-emerald-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-emerald-400"
+          className="chip border-signal-deep uppercase text-signal"
         >
           Phase 3 · offline
         </span>
-      </div>
-
+      }
+    >
       {rec.supported ? (
         <button
           type="button"
@@ -125,59 +121,59 @@ export default function VoicePanel() {
           onPointerUp={pttUp}
           onPointerLeave={pttUp}
           onContextMenu={(e) => e.preventDefault()}
-          className={`mb-2 w-full select-none rounded-md px-3 py-2 text-sm font-medium transition ${
-            rec.listening ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-100 hover:bg-slate-700'
+          className={`btn mb-2 flex w-full select-none items-center justify-center gap-2 py-2 text-xs ${
+            rec.listening ? 'btn-flare breathe' : ''
           }`}
         >
-          {rec.listening ? '● Listening — release to send' : '🎤 Hold to talk'}
+          <span
+            className={`inline-block h-1.5 w-1.5 rounded-full ${
+              rec.listening ? 'bg-flare' : 'bg-dim'
+            }`}
+          />
+          {rec.listening ? 'Listening — release to send' : 'Hold to talk'}
         </button>
       ) : (
-        <p className="mb-2 text-[11px] text-slate-500">
+        <p className="mb-2 text-[10px] text-dim">
           Speech recognition unavailable in this browser — use the box below.
         </p>
       )}
 
-      <form onSubmit={submitTyped} className="mb-2 flex gap-2">
+      <form onSubmit={submitTyped} className="mb-2 flex gap-1.5">
         <input
           value={typed}
           onChange={(e) => setTyped(e.target.value)}
           placeholder='e.g. "rotate base 30 degrees"'
-          className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-slate-500 focus:outline-none"
+          className="well min-w-0 flex-1 rounded px-2 py-1.5 text-xs text-ink outline-none placeholder:text-dim"
         />
-        <button
-          type="submit"
-          className="rounded-md bg-slate-700 px-3 py-1.5 text-sm text-slate-100 hover:bg-slate-600"
-        >
+        <button type="submit" className="btn px-3 py-1.5 text-xs">
           Send
         </button>
       </form>
 
-      {rec.interim && <p className="mb-1 text-xs italic text-slate-400">{rec.interim}…</p>}
-      {rec.error && <p className="mb-1 text-xs text-rose-400">{rec.error}</p>}
+      {rec.interim && <p className="mb-1 text-[11px] italic text-muted">{rec.interim}…</p>}
+      {rec.error && <p className="mb-1 text-[11px] text-alarm">{rec.error}</p>}
 
       {heard && (
-        <p className="mb-1 text-xs text-slate-500">
-          heard: <span className="text-slate-300">"{heard}"</span>
+        <p className="mb-1 text-[11px] text-dim">
+          heard: <span className="text-muted">"{heard}"</span>
         </p>
       )}
 
       {feedback ? (
-        <p className={`text-xs ${fbColor}`}>
-          <span className="mr-1 rounded bg-slate-800 px-1 py-0.5 text-[10px] uppercase tracking-wide text-slate-400">
-            grammar
-          </span>
+        <p className={`text-[11px] leading-relaxed ${fbColor}`}>
+          <span className="chip mr-1.5 uppercase">grammar</span>
           {feedback.text}
           {feedback.kind === 'error' && (
-            <span className="mt-1 block text-slate-500">
+            <span className="mt-1 block text-dim">
               Multi-step or free-form phrasing? Use the agentic panel below.
             </span>
           )}
         </p>
       ) : (
-        <p className="text-[11px] text-slate-600">
+        <p className="text-[10px] leading-relaxed text-dim">
           Try: {EXAMPLES.map((e) => `"${e}"`).join(' · ')}
         </p>
       )}
-    </section>
+    </Panel>
   );
 }

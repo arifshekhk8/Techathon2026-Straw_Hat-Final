@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useArmStore } from '../state/store';
 import { pinRunner } from '../state/pinRunner';
 import { isValidPin, parsePin } from '../core/pin';
+import Panel from './ui/Panel';
 
 const PHASE_LABEL: Record<string, string> = {
   transit: 'moving to key',
@@ -29,20 +30,21 @@ export default function PinPad() {
   const normalize = (s: string) => setPin(parsePin(s).slice(0, 10).join(''));
 
   return (
-    <section className="rounded-lg border border-slate-800 bg-slate-900 p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Autonomous PIN
-        </h2>
-        <span className="font-mono text-[10px] text-slate-500">
-          {running ? `${PHASE_LABEL[pp.phase] ?? pp.phase} · key ${pp.pin[pp.index]}` : 'tip ≤ 5 mm = pass'}
+    <Panel
+      title="Autonomous PIN"
+      accent
+      meta={
+        <span className={`num text-[10px] ${running ? 'text-flare' : 'text-dim'}`}>
+          {running
+            ? `${PHASE_LABEL[pp.phase] ?? pp.phase} · key ${pp.pin[pp.index]}`
+            : 'tip ≤ 5 mm = pass'}
         </span>
-      </div>
-
+      }
+    >
       <input
         aria-label="PIN"
         inputMode="numeric"
-        className="mb-2 w-full rounded bg-slate-950 px-2 py-1.5 text-center font-mono text-lg tracking-[0.4em] text-sky-200 outline-none placeholder:text-sm placeholder:tracking-normal focus:ring-1 focus:ring-sky-500 disabled:opacity-60"
+        className="well mb-2 w-full rounded px-2 py-2 text-center font-mono text-xl tracking-[0.5em] text-flare outline-none placeholder:text-[11px] placeholder:tracking-normal placeholder:text-dim disabled:opacity-60"
         value={pin}
         disabled={running}
         onChange={(e) => normalize(e.target.value)}
@@ -54,7 +56,7 @@ export default function PinPad() {
           <button
             key={d}
             disabled={running}
-            className="rounded bg-slate-800 py-2 font-mono text-base text-slate-100 hover:bg-sky-700 active:bg-sky-600 disabled:opacity-40"
+            className="btn py-2 font-mono text-sm hover:border-flare hover:text-flare"
             onClick={() => append(d)}
           >
             {d}
@@ -62,17 +64,14 @@ export default function PinPad() {
         ))}
       </div>
 
-      <div className="mb-2 flex gap-2">
+      <div className="mb-2 flex gap-1.5">
         {running ? (
-          <button
-            className="flex-1 rounded bg-rose-600 py-1.5 text-sm font-medium text-white hover:bg-rose-500"
-            onClick={() => pinRunner.abort()}
-          >
+          <button className="btn btn-alarm flex-1 py-1.5 text-xs" onClick={() => pinRunner.abort()}>
             Abort (Esc)
           </button>
         ) : (
           <button
-            className="flex-1 rounded bg-emerald-600 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
+            className="btn btn-flare flex-1 py-1.5 text-xs"
             disabled={!isValidPin(pin)}
             onClick={() => pinRunner.start(pin)}
           >
@@ -80,7 +79,7 @@ export default function PinPad() {
           </button>
         )}
         <button
-          className="rounded bg-slate-800 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-700 disabled:opacity-40"
+          className="btn px-2.5 py-1.5 text-xs"
           disabled={running || pin.length === 0}
           onClick={() => setPin((p) => p.slice(0, -1))}
           title="Backspace"
@@ -88,7 +87,7 @@ export default function PinPad() {
           ⌫
         </button>
         <button
-          className="rounded bg-slate-800 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-700 disabled:opacity-40"
+          className="btn px-2.5 py-1.5 text-xs"
           disabled={running || pin.length === 0}
           onClick={() => setPin('')}
         >
@@ -103,15 +102,18 @@ export default function PinPad() {
             const active = running && committed && i === pp.index;
             const cls = res
               ? res.ok
-                ? 'bg-emerald-600/25 border-emerald-500 text-emerald-200'
-                : 'bg-rose-700/30 border-rose-500 text-rose-200'
+                ? 'border-ok/60 text-ok'
+                : 'border-alarm/60 text-alarm'
               : active
-                ? 'bg-amber-500/25 border-amber-400 text-amber-200'
-                : 'bg-slate-800 border-slate-700 text-slate-400';
+                ? 'border-flare text-flare'
+                : 'border-hairline text-dim';
             return (
-              <div key={i} className={`flex min-w-[2.6rem] flex-col items-center rounded border px-1.5 py-1 ${cls}`}>
-                <span className="font-mono text-sm leading-none">{d}</span>
-                <span className="mt-0.5 font-mono text-[9px] leading-none">
+              <div
+                key={i}
+                className={`well flex min-w-[2.7rem] flex-col items-center rounded border px-1.5 py-1 ${cls}`}
+              >
+                <span className="num text-sm leading-none">{d}</span>
+                <span className="num mt-0.5 text-[9px] leading-none opacity-80">
                   {res ? `${res.mm === Infinity ? '∞' : res.mm.toFixed(1)}mm` : active ? '…' : '·'}
                 </span>
               </div>
@@ -119,8 +121,11 @@ export default function PinPad() {
           })}
         </div>
       ) : (
-        <p className="text-[10px] text-slate-500">Build a PIN with the keypad, then Run — the arm taps each key and grades itself within ±5 mm.</p>
+        <p className="text-[10px] leading-relaxed text-dim">
+          Build a PIN with the keypad, then Run — the arm plans, descends onto each key in order,
+          and grades itself within ±5 mm.
+        </p>
       )}
-    </section>
+    </Panel>
   );
 }

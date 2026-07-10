@@ -5,6 +5,7 @@ import { fk } from '../core/fk';
 import { SHOULDER, MAX_REACH, FLOOR_Z } from '../core/chain';
 import { dist } from '../core/math';
 import type { Vec3 } from '../core/math';
+import Panel from './ui/Panel';
 
 const R = 52; // pad radius (px)
 const STALL_MM = 0.03; // per-frame tip travel below which a held jog counts as stalled (singular)
@@ -110,38 +111,34 @@ export default function Joystick() {
     setStalled(false);
   };
 
-  const zBtn = 'flex-1 rounded bg-slate-800 py-2 text-sm font-mono text-emerald-300 select-none hover:bg-slate-700 active:bg-emerald-700/60 disabled:opacity-40';
+  const zBtn = 'btn flex-1 py-2 font-mono text-xs text-signal select-none hover:border-signal';
+  const tick = 'pointer-events-none absolute font-mono text-[8px] text-dim';
 
   return (
-    <section className="rounded-lg border border-slate-800 bg-slate-900 p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Manual · joystick
-        </h2>
+    <Panel
+      title="Manual · joystick"
+      delay={200}
+      meta={
         <button
-          className="rounded bg-rose-600/80 px-2 py-0.5 text-xs font-medium text-white hover:bg-rose-500"
+          className="btn btn-alarm px-2.5 py-0.5 text-[10px]"
           onClick={() => motion.dispatch({ type: 'stop', source: 'joystick' })}
         >
           Stop
         </button>
-      </div>
-
+      }
+    >
       {/* Speed gear — scales joystick + keyboard jog rate ([ / ] to shift) */}
-      <div className="mb-2">
+      <div className="mb-2.5">
         <div className="mb-1 flex items-center justify-between">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Gear</span>
-          <span className="font-mono text-[10px] text-slate-500">{JOG_GEARS[gear].mult}× · [ ]</span>
+          <span className="font-display text-[10px] uppercase tracking-[0.14em] text-dim">Gear</span>
+          <span className="num text-[10px] text-dim">{JOG_GEARS[gear].mult}× · [ ]</span>
         </div>
         <div className="grid grid-cols-4 gap-1">
           {JOG_GEARS.map((g, i) => (
             <button
               key={g.label}
               onClick={() => setGear(i)}
-              className={`rounded py-1 text-[11px] font-medium ${
-                i === gear
-                  ? 'bg-sky-600 text-white'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-              }`}
+              className={`btn py-1 text-[10px] ${i === gear ? 'btn-flare' : ''}`}
             >
               {g.label}
             </button>
@@ -158,27 +155,39 @@ export default function Joystick() {
           onPointerUp={releasePad}
           onPointerCancel={releasePad}
           className={`relative shrink-0 touch-none rounded-full border ${
-            running ? 'cursor-not-allowed border-slate-800 bg-slate-950/60' : 'cursor-grab border-slate-700 bg-slate-950'
+            running ? 'cursor-not-allowed border-hairline opacity-50' : 'cursor-grab border-hairline-lit'
           }`}
-          style={{ width: R * 2, height: R * 2 }}
+          style={{
+            width: R * 2,
+            height: R * 2,
+            background: 'radial-gradient(circle at 50% 42%, #131a24 0%, #05070a 78%)',
+            boxShadow: 'inset 0 2px 14px -4px #000',
+          }}
         >
-          <div className="pointer-events-none absolute inset-0 rounded-full border border-slate-800" />
-          <div className="pointer-events-none absolute left-1/2 top-1/2 h-px w-full -translate-x-1/2 -translate-y-1/2 bg-slate-800" />
-          <div className="pointer-events-none absolute left-1/2 top-1/2 h-full w-px -translate-x-1/2 -translate-y-1/2 bg-slate-800" />
+          {/* reticle */}
+          <div className="pointer-events-none absolute inset-[14px] rounded-full border border-hairline" />
+          <div className="pointer-events-none absolute inset-[30px] rounded-full border border-hairline/60" />
+          <div className="pointer-events-none absolute left-1/2 top-1/2 h-px w-full -translate-x-1/2 -translate-y-1/2 bg-hairline" />
+          <div className="pointer-events-none absolute left-1/2 top-1/2 h-full w-px -translate-x-1/2 -translate-y-1/2 bg-hairline" />
+
           <div
-            className={`pointer-events-none absolute left-1/2 top-1/2 h-6 w-6 rounded-full shadow ${
-              running ? 'bg-slate-700' : 'bg-sky-500'
+            className={`pointer-events-none absolute left-1/2 top-1/2 h-5 w-5 rounded-full transition-colors ${
+              running ? 'bg-dim' : 'bg-flare'
             }`}
-            style={{ transform: `translate(calc(-50% + ${knob[0]}px), calc(-50% + ${knob[1]}px))` }}
+            style={{
+              transform: `translate(calc(-50% + ${knob[0]}px), calc(-50% + ${knob[1]}px))`,
+              boxShadow: running ? 'none' : '0 0 14px -1px color-mix(in srgb, var(--color-flare) 70%, transparent)',
+            }}
           />
-          <span className="pointer-events-none absolute -top-0.5 left-1/2 -translate-x-1/2 text-[8px] text-slate-600">+X</span>
-          <span className="pointer-events-none absolute -bottom-0.5 left-1/2 -translate-x-1/2 text-[8px] text-slate-600">−X</span>
-          <span className="pointer-events-none absolute left-0.5 top-1/2 -translate-y-1/2 text-[8px] text-slate-600">+Y</span>
-          <span className="pointer-events-none absolute right-0.5 top-1/2 -translate-y-1/2 text-[8px] text-slate-600">−Y</span>
+
+          <span className={`${tick} -top-0.5 left-1/2 -translate-x-1/2`}>+X</span>
+          <span className={`${tick} -bottom-0.5 left-1/2 -translate-x-1/2`}>−X</span>
+          <span className={`${tick} left-1 top-1/2 -translate-y-1/2`}>+Y</span>
+          <span className={`${tick} right-1 top-1/2 -translate-y-1/2`}>−Y</span>
         </div>
 
         {/* Z column + workspace-limit badge */}
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <button
             className={zBtn}
             disabled={running}
@@ -200,12 +209,13 @@ export default function Joystick() {
             ▼ Z down
           </button>
           <div
-            className={`rounded px-2 py-1 text-center font-mono text-[10px] ${
+            // Workspace limits warn in amber; crimson is the gate's colour alone.
+            className={`well rounded border px-2 py-1 text-center font-mono text-[10px] ${
               running
-                ? 'bg-slate-800 text-slate-400'
+                ? 'border-hairline text-dim'
                 : stalled || limit
-                  ? 'bg-amber-500/20 text-amber-300'
-                  : 'bg-emerald-600/20 text-emerald-300'
+                  ? 'border-flare/50 text-flare'
+                  : 'border-ok/40 text-ok'
             }`}
             title={`reach ${(reach * 100).toFixed(0)} % · tip z ${(tip[2] * 1000).toFixed(0)} mm`}
           >
@@ -214,15 +224,17 @@ export default function Joystick() {
               : stalled
                 ? 'blocked · nudge X/Y'
                 : limit
-                  ? nearReach ? 'near reach limit' : 'near floor'
+                  ? nearReach
+                    ? 'near reach limit'
+                    : 'near surface'
                   : `in range · ${(reach * 100).toFixed(0)} %`}
           </div>
         </div>
       </div>
 
-      <p className="mt-2 text-[10px] text-slate-500">
+      <p className="mt-2.5 text-[10px] text-dim">
         Drag the pad to jog the tip; hold Z to raise/lower. Proportional speed, smooth stop.
       </p>
-    </section>
+    </Panel>
   );
 }
