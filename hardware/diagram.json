@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "author": "Team Straw Hat",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-arduino-uno", "id": "uno", "top": 40, "left": 0, "attrs": {} },
+    { "type": "wokwi-servo", "id": "servo1", "top": -220, "left": 320, "attrs": { "hornColor": "#ff5252" } },
+    { "type": "wokwi-servo", "id": "servo2", "top": -120, "left": 320, "attrs": { "hornColor": "#ff9800" } },
+    { "type": "wokwi-servo", "id": "servo3", "top": -20, "left": 320, "attrs": { "hornColor": "#ffeb3b" } },
+    { "type": "wokwi-servo", "id": "servo4", "top": 80, "left": 320, "attrs": { "hornColor": "#4caf50" } },
+    { "type": "wokwi-servo", "id": "servo5", "top": 180, "left": 320, "attrs": { "hornColor": "#2196f3" } },
+    { "type": "wokwi-servo", "id": "servo6", "top": 280, "left": 320, "attrs": { "hornColor": "#3f51b5" } },
+    { "type": "wokwi-servo", "id": "servo7", "top": 380, "left": 320, "attrs": { "hornColor": "#9c27b0" } }
+  ],
+  "connections": [
+    [ "servo1:PWM", "uno:2", "green", [] ],
+    [ "servo2:PWM", "uno:3", "green", [] ],
+    [ "servo3:PWM", "uno:4", "green", [] ],
+    [ "servo4:PWM", "uno:5", "green", [] ],
+    [ "servo5:PWM", "uno:6", "green", [] ],
+    [ "servo6:PWM", "uno:7", "green", [] ],
+    [ "servo7:PWM", "uno:8", "green", [] ],
+    [ "servo1:V+", "uno:5V", "red", [] ],
+    [ "servo2:V+", "uno:5V", "red", [] ],
+    [ "servo3:V+", "uno:5V", "red", [] ],
+    [ "servo4:V+", "uno:5V", "red", [] ],
+    [ "servo5:V+", "uno:5V", "red", [] ],
+    [ "servo6:V+", "uno:5V", "red", [] ],
+    [ "servo7:V+", "uno:5V", "red", [] ],
+    [ "servo1:GND", "uno:GND.1", "black", [] ],
+    [ "servo2:GND", "uno:GND.1", "black", [] ],
+    [ "servo3:GND", "uno:GND.1", "black", [] ],
+    [ "servo4:GND", "uno:GND.2", "black", [] ],
+    [ "servo5:GND", "uno:GND.2", "black", [] ],
+    [ "servo6:GND", "uno:GND.2", "black", [] ],
+    [ "servo7:GND", "uno:GND.3", "black", [] ]
+  ],
+  "dependencies": {}
+}
