@@ -4,8 +4,10 @@ import { useArmStore } from '../state/store';
 import { fk } from '../core/fk';
 import { SHOULDER, MAX_REACH, FLOOR_Z } from '../core/chain';
 import { dist } from '../core/math';
+import type { Vec3 } from '../core/math';
 
 const R = 52; // pad radius (px)
+const STALL_MM = 0.03; // per-frame tip travel below which a held jog counts as stalled (singular)
 
 /** GUI joystick — the same manual lane as the keyboard, aimed at a mouse/touch.
  *  The XY pad jogs the tip in the base plane (proportional to deflection), the
@@ -16,22 +18,50 @@ export default function Joystick() {
   const running = useArmStore((s) => s.pinProgress.running);
   const q = useArmStore((s) => s.q);
   const padRef = useRef<HTMLDivElement>(null);
+  const active = useRef<Set<string>>(new Set()); // ids currently jogging via this pad
+  const prevTip = useRef<Vec3>([0, 0, 0]);
   const [knob, setKnob] = useState<[number, number]>([0, 0]); // px offset, for the visual
+  const [stalled, setStalled] = useState(false); // jog commanded but tip can't move (singularity)
+
+  const releaseAllJogs = () => {
+    for (const id of active.current) motion.endCartJog(id);
+    active.current.clear();
+    setKnob([0, 0]);
+    setStalled(false);
+  };
 
   // A PIN run must never leave a jog latched — drop everything the moment it starts.
   useEffect(() => {
-    if (running) {
-      motion.releaseAll();
-      setKnob([0, 0]);
-    }
+    if (running) releaseAllJogs();
   }, [running]);
 
-  // Workspace-limit telemetry from the live pose.
+  // Safety net: a pointer released off the element (or focus loss) must not latch a jog.
+  useEffect(() => {
+    const off = () => releaseAllJogs();
+    window.addEventListener('pointerup', off);
+    window.addEventListener('blur', off);
+    return () => {
+      window.removeEventListener('pointerup', off);
+      window.removeEventListener('blur', off);
+    };
+  }, []);
+
+  // Workspace telemetry from the live pose. Re-runs each frame the pose changes.
   const tip = fk(q);
   const reach = dist(tip, SHOULDER) / MAX_REACH;
   const nearReach = reach > 0.92;
   const nearFloor = tip[2] < FLOOR_Z + 0.03;
   const limit = nearReach || nearFloor;
+
+  // Singularity/limit stall: a jog is held but the tip isn't actually moving.
+  // Keyed to `q` — setQ hands out a fresh array each frame, so this samples one
+  // true per-frame delta and never self-triggers off its own setStalled render.
+  useEffect(() => {
+    const moved = dist(tip, prevTip.current) * 1000;
+    prevTip.current = tip;
+    setStalled(active.current.size > 0 && moved < STALL_MM);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
 
   const drive = (px: number, py: number) => {
     let ux = px / R;
@@ -40,6 +70,7 @@ export default function Joystick() {
     if (n > 1) { ux /= n; uy /= n; } // clamp to the unit disc
     // Screen up → tip +X (forward); screen right → tip −Y — matches the arrow keys.
     motion.beginCartJog('pad', [-uy, -ux, 0], 'joystick');
+    active.current.add('pad');
     setKnob([ux * R, uy * R]);
   };
 
@@ -60,15 +91,22 @@ export default function Joystick() {
   };
   const releasePad = () => {
     motion.endCartJog('pad'); // controller eases the tip to rest
+    active.current.delete('pad');
     setKnob([0, 0]);
+    setStalled(false);
   };
 
   const zHold = (id: string, dz: number) => (e: React.PointerEvent) => {
     if (running) return;
     capture(e);
     motion.beginCartJog(id, [0, 0, dz], 'joystick');
+    active.current.add(id);
   };
-  const zRelease = (id: string) => () => motion.endCartJog(id);
+  const zRelease = (id: string) => () => {
+    motion.endCartJog(id);
+    active.current.delete(id);
+    setStalled(false);
+  };
 
   const zBtn = 'flex-1 rounded bg-slate-800 py-2 text-sm font-mono text-emerald-300 select-none hover:bg-slate-700 active:bg-emerald-700/60 disabled:opacity-40';
 
@@ -140,13 +178,19 @@ export default function Joystick() {
             className={`rounded px-2 py-1 text-center font-mono text-[10px] ${
               running
                 ? 'bg-slate-800 text-slate-400'
-                : limit
+                : stalled || limit
                   ? 'bg-amber-500/20 text-amber-300'
                   : 'bg-emerald-600/20 text-emerald-300'
             }`}
             title={`reach ${(reach * 100).toFixed(0)} % · tip z ${(tip[2] * 1000).toFixed(0)} mm`}
           >
-            {running ? 'PIN running' : limit ? (nearReach ? 'near reach limit' : 'near floor') : `in range · ${(reach * 100).toFixed(0)} %`}
+            {running
+              ? 'PIN running'
+              : stalled
+                ? 'blocked · nudge X/Y'
+                : limit
+                  ? nearReach ? 'near reach limit' : 'near floor'
+                  : `in range · ${(reach * 100).toFixed(0)} %`}
           </div>
         </div>
       </div>
